@@ -18,10 +18,14 @@ from . import iterators
 from . import mode
 from . import policy
 from . import spaces
+from . import wrappers
 
-__all__ = ('iterators', 'mode', 'policy', 'spaces')
+__all__ = ('iterators', 'mode', 'policy', 'spaces', 'wrappers')
 
 from .iterators import episode, episodes, iterator
+
+def init():
+    ray.init()
 
 def mp_episodes(env, policy=lambda: None, mode=mode.s, workers=1, n=1, max_length=1000):
     """ 

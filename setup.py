@@ -22,6 +22,6 @@ setup(name='gym_mp',
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
       ],
-      install_requires=['gym', 'numpy', 'ray'],
+      install_requires=['gym', 'numpy', 'ray[tune]'],
       include_package_data=True,
       packages=find_packages())
