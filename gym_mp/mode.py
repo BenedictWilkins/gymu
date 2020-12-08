@@ -38,7 +38,8 @@ class s(mode):
     @property
     def state(self):
         return self[0]
-        
+
+
 class r(mode):
     
     def __init__(self, reward=None, **kwargs):
@@ -47,6 +48,8 @@ class r(mode):
     @property
     def reward(self):
         return self[0]
+
+
 
 class sa(mode):
     

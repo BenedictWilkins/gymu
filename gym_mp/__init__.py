@@ -24,6 +24,38 @@ __all__ = ('iterators', 'mode', 'policy', 'spaces', 'wrappers')
 
 from .iterators import episode, episodes, iterator
 
+
+def stack(states, frames=3, copy=True):
+    """ Stack states. with an input of states [s1, s2, ..., sn] where each state is a grayscale image, 
+        the output will is given as:
+        
+        [[s1, s2, ..., sm  ],
+         [s2, s3, ..., sm+1],
+                  ...  sn  ]]
+        where m = frames
+
+
+        Args:
+            states (numpy.ndarray): states [s1, s2, ..., sn] as images NHWC format.
+            frames (int, optional): number of states to stack. Defaults to 3.
+            copy (bool, optional): create a new array to store the ouput. WARNING: without a copy, modifying 
+                                    the array can have undesirable effects as stride_tricks is used. Defaults to True.
+
+        Returns:
+            numpy.ndarray: stacked states
+    """
+    states = states.squeeze() #remove channels
+    shape = states.shape
+    assert len(shape) == 3 # NHW format
+
+    # stack frames
+    stacked = np.lib.stride_tricks.as_strided(states, shape=(shape[0] - frames, *shape[1:], frames), strides=(*states.strides, states.strides[0]))
+    if copy:
+        stacked = np.copy(stacked)
+    return stacked
+
+
+
 def init():
     ray.init()
 
@@ -139,23 +171,6 @@ def mp_iterator(env, policy, mode=mode.s, workers=2, repeat=False):
     return it
 
 
-
-
-
-"""
-
-    class iterator: 
-
-        def __init__(self, env_factory, policy_factory):
-            self.env_factory = env_factory
-            self.policy_factory = policy_factory
-
-        def __iter__(self):
-            e = self.env_factory()
-            p = self.policy_factory()
-            return iter(iterators.iterator(self.env_factory(), self.policy_factory()))
-
-"""
 
 
 

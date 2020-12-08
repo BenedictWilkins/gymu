@@ -33,3 +33,73 @@ class OneHot(gym.Space):
 
     def __repr__(self):
         return "OneHot(%d)" % self.size
+
+class ABox(gym.spaces.Box):
+    
+    def __init__(self, low, high, shape=None, dtype=np.float32):
+        super(ABox, self).__init__(low, high, shape=shape, dtype=dtype)
+    
+    def __getitem__(self, i):
+        return ABox(self.low[i], self.high[i], dtype=self.dtype)
+    
+    def astype(self, dtype):
+        return ABox(self.low.astype(dtype), self.high.astype(dtype), dtype=dtype)
+       
+    
+    def transform(self, fun):
+        low = fun(self.low)
+        high = fun(self.high)
+        assert low.dtype == high.dtype
+        assert low.shape == high.shape
+        return ABox(low, high, dtype=low.dtype)
+    
+    def transpose(self, axes):
+        return self.transform(lambda x: np.transpose(x, axes=axes))
+
+    def prod(self, axis=None, dtype=None, **kwargs):
+        return self.transform(lambda x: np.prod(x, axis=axis, dtype=dtype, **kwargs))
+    
+    def sum(self, axis=None, dtype=None, **kwargs):
+        return self.transform(lambda x: np.sum(x, axis=axis, dtype=dtype, **kwargs))
+    
+    def __gt__(self, x):
+        return self.transform(lambda y : y > x)
+    
+    def __ge__(self, x):
+        return self.transform(lambda y : y >= x)
+    
+    def __lt__(self, x):
+        return self.transform(lambda y : y < x)
+    
+    def __le__(self, x):
+        return self.transform(lambda y : y <= x)
+    
+    def __eq__(self, x):
+        return self.transform(lambda y : y == x)
+    
+    def __ne__(self, x):
+        return self.transform(lambda y : y != x)
+     
+    def __add__(self, x):
+        return self.transform(lambda y : y + x)
+    
+    def __sub__(self, x):
+        return self.transform(lambda y : y - x)
+    
+    def __mul__(self, x):
+        return self.transform(lambda y : y * x)
+        
+    def __div__(self, x):
+        return self.transform(lambda y : y / x)
+    
+    def __floordiv__(self, x):
+        return self.transform(lambda y : y // x)
+    
+    def __truediv__(self, x):
+        return self.transform(lambda y : y / x)
+    
+    def __neg__(self):
+        return self.transform(lambda y : -y)
+    
+    def __abs__(self):
+        return self.transform(lambda y : np.abs(y))

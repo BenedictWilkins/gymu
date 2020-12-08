@@ -32,7 +32,7 @@ def r_iterator(env, policy):
         state, reward, done, *_ = env.step(action)
         yield m.r(reward)
         
-def sa_iterator(env, policy ):
+def sa_iterator(env, policy):
     state = env.reset()
     done = False
     while not done:
@@ -115,7 +115,6 @@ class iterator:
     def __iter__(self):
         return iterator.iterators[self.mode](self.env, self.policy)
 
-
 def episode(env, policy=None, mode=m.s, max_length=1000):
     """ 
         Creates an episode from the given environment and policy.
@@ -133,18 +132,26 @@ def episode(env, policy=None, mode=m.s, max_length=1000):
     it = itertools.islice(it, 0, max_length)
     return m.pack(it)
 
-def episodes(env, policy=None, mode=m.s, n=1, max_length=1000):
-    """ An iterator for episodes, generates n episodes.
+class episodes:
 
-        env (gym.Env): environment.
-        policy (Policy, optional): policy. Defaults to a uniform random policy.
-        mode (mode, optional): mode (see gym_mp.mode). Defaults to state mode.
-        n (int, optional): number of episodes to generate, a negative value corresponds to infinite episodes. Defaults to 1.
-        max_length (int, optional): maximum length of the episode (longer episodes will be cut short). Defaults to 1000.
-    """
-    if n < 0:
-        while True:
-            yield episode(env, policy, mode=mode, max_length=max_length)
-    else:
-        for i in range(n):
-            yield episode(env, policy, mode=mode, max_length=max_length)
+    def __init__(self, env, policy=None, mode=m.s, n=1, max_length=1000):
+        self.env = env
+        self.policy = policy
+        self.mode = mode
+        self.n = n
+        if self.n < 0:
+            self.n = float("inf")
+        self.max_length = max_length
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.n >= 0: 
+            self.n -= 1
+            return episode(self.env, self.policy, mode=self.mode, max_length=self.max_length)
+        else:
+            raise StopIteration()
+        
+    def __len__(self):
+        return self.n

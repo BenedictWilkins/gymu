@@ -44,6 +44,12 @@ class Policy(ABC):
     def __call__(self, *args, **kwargs):
         return self.sample(*args, **kwargs)
 
+    def __str__(self):
+        return "{0} - {1}".format(self.__class__.__name__, str(self.action_space))
+
+    def __repr__(self):
+        return str(self)
+
 class DiscretePolicy(Policy):
 
     def __init__(self, action_space, dtype=np.int64):
@@ -69,7 +75,6 @@ class NeuralPolicy(DiscretePolicy):
         v = self.nn(*args, **kwargs)
         p = self.p(v)
         i = torch.multinomial(p, 1).squeeze()
-
         raise NotImplementedError("TODO")
 
 def onehot(policy, dtype=np.float32):
@@ -86,8 +91,6 @@ def onehot(policy, dtype=np.float32):
     policy.sample = oh
     
     return policy
-
-
 
     
 def uniform(action_space, dtype=np.int64):
