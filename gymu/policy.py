@@ -1,10 +1,14 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Created on Mon Nov 25 13:04:25 2019
+ Created on 14-01-2021 12:11:59
 
-author: Benedict Wilkins
+ [Description]
 """
+__author__ ="Benedict Wilkins"
+__email__ = "benrjw@gmail.com"
+__status__ ="Development"
+
 from abc import ABC, abstractmethod
 import numpy as np
 import gym
