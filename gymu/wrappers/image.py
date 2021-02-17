@@ -12,14 +12,16 @@ __status__ ="Development"
 import numpy as np
 import skimage.transform
 
-from .np_wrap import NumpyWrapper
+from .np_wrap import NumpyWrapper, _wrap
 from ..spaces import NumpyBox
 
 class image(NumpyWrapper):
 
     def __init__(self, env):
         super(image, self).__init__(env)
+        self._wrap_type = self.__class__.__name__.capitalize()
 
+    @_wrap
     def grey(self, components=(0.299, 0.587, 0.114)):
         wrap = image(self)
 
@@ -37,14 +39,23 @@ class image(NumpyWrapper):
 
         wrap._transform = lambda x: (x * components).sum(axis=ci, keepdims=True)
         wrap.observation_space = wrap._transform(wrap.observation_space)
+        
         return wrap
 
-    def chw(self): # assumes HWC format
-        return self.transpose(2,0,1)
+    @_wrap
+    def CHW(self): # assumes HWC format
+        wrap = self.transpose((2,0,1))
+        wrap.__class__ = image # hackz
+        return wrap 
 
-    def hwc(self): # assumes CHW format
-        return self.transpose(1,2,0)
 
+    @_wrap
+    def HWC(self): # assumes CHW format
+        wrap = self.transpose((1,2,0))
+        wrap.__class__ = image # hackz
+        return wrap 
+
+    @_wrap
     def resize(self, *shape, interpolation=0):
         
         wrap = image(self)
