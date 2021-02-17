@@ -34,24 +34,23 @@ class OneHot(gym.Space):
     def __repr__(self):
         return "OneHot(%d)" % self.size
 
-class ABox(gym.spaces.Box):
+class NumpyBox(gym.spaces.Box):
     
     def __init__(self, low, high, shape=None, dtype=np.float32):
-        super(ABox, self).__init__(low, high, shape=shape, dtype=dtype)
+        super(NumpyBox, self).__init__(low, high, shape=shape, dtype=dtype)
     
     def __getitem__(self, i):
-        return ABox(self.low[i], self.high[i], dtype=self.dtype)
+        return NumpyBox(self.low[i], self.high[i], dtype=self.dtype)
     
     def astype(self, dtype):
-        return ABox(self.low.astype(dtype), self.high.astype(dtype), dtype=dtype)
+        return NumpyBox(self.low.astype(dtype), self.high.astype(dtype), dtype=dtype)
        
-    
     def transform(self, fun):
         low = fun(self.low)
         high = fun(self.high)
         assert low.dtype == high.dtype
         assert low.shape == high.shape
-        return ABox(low, high, dtype=low.dtype)
+        return NumpyBox(low, high, dtype=low.dtype)
     
     def transpose(self, axes):
         return self.transform(lambda x: np.transpose(x, axes=axes))
@@ -62,6 +61,8 @@ class ABox(gym.spaces.Box):
     def sum(self, axis=None, dtype=None, **kwargs):
         return self.transform(lambda x: np.sum(x, axis=axis, dtype=dtype, **kwargs))
     
+    ## boolean operators should do something different, its now a bool box array? (__eq__ will not work properly here)
+
     def __gt__(self, x):
         return self.transform(lambda y : y > x)
     

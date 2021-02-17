@@ -13,7 +13,7 @@ import itertools
 import gym
 
 from . import mode as m
-from .policy import uniform as uniform_policy
+from .policy import Uniform as uniform_policy
 
 def s_iterator(env, policy):
     state = env.reset()

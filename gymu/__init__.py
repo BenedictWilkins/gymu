@@ -18,12 +18,14 @@ from . import iterators
 from . import mode
 from . import policy
 from . import spaces
-from . import wrappers
+from . import wrapper
 
-__all__ = ('iterators', 'mode', 'policy', 'spaces', 'wrappers')
+__all__ = ('iterators', 'mode', 'policy', 'spaces', 'wrapper')
 
 from .iterators import episode, episodes, iterator
 
+def make(env_id, **kwargs):
+    return gym.make(env_id, **kwargs)
 
 def stack(states, frames=3, copy=True):
     """ Stack states. with an input of states [s1, s2, ..., sn] where each state is a grayscale image, 
@@ -53,7 +55,6 @@ def stack(states, frames=3, copy=True):
     if copy:
         stacked = np.copy(stacked)
     return stacked
-
 
 
 def init():
