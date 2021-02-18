@@ -24,9 +24,6 @@ def _wrap(fun):
         return w
     return wrap
 
-
-
-
 class NumpyWrapper(gym.Wrapper):
     
     """
@@ -41,8 +38,8 @@ class NumpyWrapper(gym.Wrapper):
             self.observation_space = NumpyBox(env.observation_space.low, env.observation_space.high, dtype=env.observation_space.dtype)
         else:
             raise ValueError("Invalid space {0} must be of type {1}".format(type(env.observation_space), gym.spaces.Box))
-        self._transform = lambda x: x # no transform
         self._wrap_type = "Numpy"
+        self._transform = lambda x : x # identity
 
     def __str__(self):
         return "<{0}{1}>".format(str(self._wrap_type), str(self.env))

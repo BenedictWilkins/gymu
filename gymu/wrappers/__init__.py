@@ -16,6 +16,9 @@ from . import atari
 
 __all__ = ('atari',)
 
+def numpy(env):
+    return NumpyWrapper(env)
+
 class ActionDelay(gym.ActionWrapper):
 
     """

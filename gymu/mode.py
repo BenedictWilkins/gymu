@@ -30,6 +30,9 @@ class mode:
     def __repr__(self):
         return str(self)
 
+    def tuple(self):
+        return self.__data
+
 class s(mode):
     
     def __init__(self, state=None, **kwargs):
@@ -39,7 +42,6 @@ class s(mode):
     def state(self):
         return self[0]
 
-
 class r(mode):
     
     def __init__(self, reward=None, **kwargs):
@@ -48,8 +50,6 @@ class r(mode):
     @property
     def reward(self):
         return self[0]
-
-
 
 class sa(mode):
     

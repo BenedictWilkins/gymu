@@ -1,19 +1,20 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-    Created on 16-09-2020 13:21:22
+ Created on 18-02-2021 09:50:06
 
-    [Description]
+ [Description]
 """
-__author__ = "Benedict Wilkins"
+__author__ ="Benedict Wilkins"
 __email__ = "benrjw@gmail.com"
-__status__ = "Development"
+__status__ ="Development"
 
 import itertools
 import gym
+import ray
 
-from . import mode as m
-from .policy import Uniform as uniform_policy
+from .. import mode as m
+from ..policy import Uniform as uniform_policy
 
 def s_iterator(env, policy):
     state = env.reset()
@@ -106,6 +107,9 @@ class iterator:
     def __init__(self, env, policy=None, mode=m.s):
         if isinstance(env, str):
             env = gym.make(env)
+        elif not isinstance(env, gym.Env) and callable(env):
+            env = env() # create a new environment # useful for parallelism (to avoid copy issues)
+
         self.env = env
         if policy is None:
             policy = uniform_policy(self.env.action_space)
@@ -132,26 +136,42 @@ def episode(env, policy=None, mode=m.s, max_length=1000):
     it = itertools.islice(it, 0, max_length)
     return m.pack(it)
 
-class episodes:
+def episodes(env, policy=None, mode=m.s, n=1, max_length=1000, num_workers=1):
+    assert num_workers >= 1
+    if num_workers == 1:
+        return Episodes(env, policy=policy, mode=mode, n=n, max_length=max_length)
+    else:
+        assert n >= num_workers
+        workers = [EpisodesWorker.remote(env, policy=policy, mode=mode, n = n // num_workers, max_length=max_length) for _ in range(num_workers)]
+        return ray.util.iter.from_actors(workers).gather_async()
 
-    def __init__(self, env, policy=None, mode=m.s, n=1, max_length=1000):
-        self.env = env
-        self.policy = policy
-        self.mode = mode
+class FuncRepeat:
+    
+    def __init__(self, fun, n=1):
+        self.fun = fun
         self.n = n
         if self.n < 0:
             self.n = float("inf")
-        self.max_length = max_length
-
+    
     def __iter__(self):
-        return self
-
-    def __next__(self):
-        if self.n >= 0: 
-            self.n -= 1
-            return episode(self.env, self.policy, mode=self.mode, max_length=self.max_length)
-        else:
-            raise StopIteration()
-        
+        print(self.n)
+        for i in range(self.n):
+            yield self.fun()
+    
     def __len__(self):
         return self.n
+        
+class Episodes(FuncRepeat):
+
+    def __init__(self, env, policy= None, mode=m.s, n=1, max_length=1000):
+        assert isinstance(env, str) or callable(env) # avoid copy issues
+                          
+        def _episode():
+            return episode(env, policy, mode=mode, max_length=max_length)
+        super(Episodes, self).__init__(_episode, n=n) 
+
+@ray.remote
+class EpisodesWorker(ray.util.iter.ParallelIteratorWorker):
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(Episodes(*args, **kwargs), False)
