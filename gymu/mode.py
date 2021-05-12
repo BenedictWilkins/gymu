@@ -13,8 +13,17 @@ from collections import namedtuple
 
 import numpy as np
 
-class mode:
+properties = set()
+
+class _meta_mode(type):
     
+    def __new__(cls, name, bases, dct):
+        m = super().__new__(cls, name, bases, dct)
+        m.properties = {name for name, attr in m.__dict__.items() if isinstance(attr, property)}
+        return m
+
+class mode(metaclass=_meta_mode):
+
     def __init__(self, *data):
         self.__data = data
     
@@ -29,12 +38,12 @@ class mode:
 
     def __repr__(self):
         return str(self)
-
-    def tuple(self):
-        return self.__data
+    
+    def __len__(self):
+        return len(self.__data)
 
 class s(mode):
-    
+
     def __init__(self, state=None, **kwargs):
         super(s, self).__init__(state)
     
@@ -164,8 +173,8 @@ class sars(mode):
     def nstate(self):
         return self[3] 
 
+
+
 def pack(modes):
-    """ 
-        Packs a list of modes into numpy arrays
-    """
+    """ Pack a list of modes into numpy arrays. """
     return tuple([np.array(d) for d in [i for i in zip(*modes)]])

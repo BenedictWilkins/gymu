@@ -13,13 +13,7 @@ import itertools
 import gym
 import ray
 
-
 from .. import mode as m
 from ..policy import Uniform as uniform_policy
 
 from .base import *
-
-try: 
-    from .torchutils import *
-except ImportError:
-    pass # Torch was not found...

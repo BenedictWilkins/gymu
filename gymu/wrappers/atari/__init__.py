@@ -185,17 +185,7 @@ class ClipRewardEnv(gym.RewardWrapper):
         """
         return np.sign(reward)
 
-def wrap_atari(env, episode_life=False, clip_rewards=True, frame_stack=4):
-    """
-        Create a wrapped atari Environment
-
-        :param env_id: (str) the environment ID
-        :param episode_life: (bool) wrap the episode life wrapper
-        :param clip_rewards: (bool) wrap the reward clipping wrapper
-        :param frame_stack: (bool) wrap the frame stacking wrapper
-        :return: (Gym Environment) the wrapped atari environment
-    """
-
+def wrap_atari(env, episode_life=False, clip_rewards=True, frame_stack=4, binary=None):
     assert 'NoFrameskip' in env.spec.id
 
     env = NoopResetEnv(env, noop_max=30)
@@ -210,6 +200,9 @@ def wrap_atari(env, episode_life=False, clip_rewards=True, frame_stack=4):
 
     env = image(env).grey((1/3,1/3,1/3))
     env = env.resize(84,84,1).CHW() / 255
+
+    if binary is not None:
+        env = (env > binary).astype(np.float32)
 
     if clip_rewards:
         env = ClipRewardEnv(env)

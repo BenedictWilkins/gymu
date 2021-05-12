@@ -209,7 +209,7 @@ class Stack(gym.Wrapper):
         return np.concatenate(self.buffer, axis=self.ci)
 
 
-class Temporal(NumpyWrapper):
+class Temporal(NumpyWrapper): # TODO ... maybe?? 
 
     def __init__(self, env):
         super(Temporal, self).__init__(env)
@@ -229,10 +229,6 @@ class Temporal(NumpyWrapper):
 
     def step(self, action):
         state, reward, done, *info = self.env.step(action)
-
-
-
-
 
     def reset(self):
         pass 

@@ -136,13 +136,14 @@ def episode(env, policy=None, mode=m.s, max_length=1000):
     it = itertools.islice(it, 0, max_length)
     return m.pack(it)
 
-def episodes(env, policy=None, mode=m.s, n=1, max_length=1000, num_workers=1):
-    assert num_workers >= 1
-    if num_workers == 1:
+def episodes(env, policy=None, mode=m.s, n=1, max_length=1000, workers=1):
+    assert workers >= 1
+    if workers == 1:
         return Episodes(env, policy=policy, mode=mode, n=n, max_length=max_length)
     else:
-        assert n >= num_workers
-        workers = [EpisodesWorker.remote(env, policy=policy, mode=mode, n = n // num_workers, max_length=max_length) for _ in range(num_workers)]
+        assert n >= workers
+        assert isinstance(env, str) or callable(env) # avoid copy issues
+        workers = [EpisodesWorker.remote(env, policy=policy, mode=mode, n = n // workers, max_length=max_length) for _ in range(workers)]
         return ray.util.iter.from_actors(workers).gather_async()
 
 class FuncRepeat:
@@ -154,7 +155,6 @@ class FuncRepeat:
             self.n = float("inf")
     
     def __iter__(self):
-        print(self.n)
         for i in range(self.n):
             yield self.fun()
     
@@ -163,9 +163,7 @@ class FuncRepeat:
         
 class Episodes(FuncRepeat):
 
-    def __init__(self, env, policy= None, mode=m.s, n=1, max_length=1000):
-        assert isinstance(env, str) or callable(env) # avoid copy issues
-                          
+    def __init__(self, env, policy= None, mode=m.s, n=1, max_length=1000):           
         def _episode():
             return episode(env, policy, mode=mode, max_length=max_length)
         super(Episodes, self).__init__(_episode, n=n) 
