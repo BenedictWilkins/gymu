@@ -15,5 +15,4 @@ except ImportError: # PyTorch was not found
     pass 
 else: # Pytorch was found
     from . import data
-    
-
+    __all__ = ('data',)

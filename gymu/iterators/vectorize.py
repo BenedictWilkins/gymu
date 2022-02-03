@@ -10,10 +10,15 @@ __email__ = "benrjw@gmail.com"
 __status__ ="Development"
 
 
-import itertools
 import gym
 from .. import mode as m
 from ..policy import Uniform as uniform_policy
+
+def vectorize(envf, n=10, sync=False, shared_memory=False, daemon=True):
+    if sync:
+        return gym.vector.SyncVectorEnv([envf] * n)
+    else:
+        return gym.vector.AsyncVectorEnv([envf] * n, shared_memory=shared_memory, daemon=daemon) 
 
 def s_iterator(env, policy):
     state = env.reset()

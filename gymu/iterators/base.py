@@ -11,104 +11,20 @@ __status__ ="Development"
 
 import itertools
 import gym
+from numpy.lib.arraysetops import isin
 import ray
+from tqdm.auto import tqdm
 
 from .. import mode as m
 from ..policy import Uniform as uniform_policy
 
-def s_iterator(env, policy):
-    state = env.reset()
-    yield m.s(state)
-    done = False
-    while not done:
-        action = policy(state)
-        state, _, done, *_ = env.step(action)
-        yield m.s(state)
-        
-def r_iterator(env, policy):
-    state = env.reset()
-    done = False
-    while not done:
-        action = policy(state)
-        state, reward, done, *_ = env.step(action)
-        yield m.r(reward)
-        
-def sa_iterator(env, policy):
-    state = env.reset()
-    done = False
-    while not done:
-        action = policy(state)
-        nstate, _, done, *_ = env.step(action)
-        yield m.sa(state, action)
-        state = nstate
-    yield m.sa(state, action)
-        
-def sr_iterator(env, policy):
-    state = env.reset()
-    done = False
-    while not done:
-        action = policy(state)
-        nstate, reward, done, *_ = env.step(action)
-        yield m.sr(state, reward)
-        state = nstate
-    #yield m.sr(state, 0.), True #?? maybe..
-        
-def ss_iterator(env, policy):
-    state = env.reset()
-    done = False
-    while not done:
-        action = policy(state)
-        nstate, _, done, *_ = env.step(action)
-        yield m.ss(state, nstate)
-        state = nstate
-
-def sar_iterator(env, policy):
-    state = env.reset()
-    done = False
-    while not done:
-        action = policy(state)
-        nstate, reward, done, *_ = env.step(action)
-        yield m.sar(state, action, reward)
-        state = nstate
-    
-def ars_iterator(env, policy):
-    state = env.reset()
-    yield m.ars(None, None, state)
-    done = False
-    while not done:
-        action = policy(state)
-        state, reward, done, *_ = env.step(action)
-        yield m.ars(action, reward, state)
-
-def sas_iterator(env, policy):
-    state = env.reset()
-    done = False
-    while not done:
-        action = policy(state)
-        nstate, _, done, *_ = env.step(action)
-        yield m.sas(state, action, nstate)
-        state = nstate
-
-def sars_iterator(env, policy):
-    state = env.reset()
-    done = False
-    while not done:
-        action = policy(state)
-        nstate, reward, done, *_ = env.step(action)
-        yield m.sars(state, action, reward, nstate)
-        state = nstate
-
 class iterator:
-
-    iterators = {m.s:s_iterator, m.r:r_iterator, m.sa:sa_iterator, m.ss:ss_iterator, m.sr:sr_iterator, 
-             m.sar:sar_iterator, m.ars:ars_iterator, m.sas:sas_iterator, 
-             m.sars:sars_iterator}
 
     def __init__(self, env, policy=None, mode=m.s):
         if isinstance(env, str):
             env = gym.make(env)
         elif not isinstance(env, gym.Env) and callable(env):
-            env = env() # create a new environment # useful for parallelism (to avoid copy issues)
+            env = env() # create a new environment, useful for parallelism (to avoid copy issues)
 
         self.env = env
         if policy is None:
@@ -117,7 +33,36 @@ class iterator:
         self.mode = mode
         
     def __iter__(self):
-        return iterator.iterators[self.mode](self.env, self.policy)
+        state = self.env.reset()
+        done = False
+        while not done:
+            action = self.policy(state)
+            # state, action, next_state, reward, done, info
+            result = [state, action, *self.env.step(action)] 
+            yield self.mode(*[result[i] for i in self.mode.__index__])
+            state = result[2]
+
+            done = result[4]
+
+def stream(env, policy=None, mode=m.s, max_episode_length=-1):
+    """ Stream the environment, resetting whenever needed (or according to max_episode_length).
+
+    Args:
+        env (gym.Env): environment.
+        policy (Policy, optional): policy. Defaults to a uniform random policy.
+        mode (mode, optional): mode (see gym_mp.mode). Defaults to state mode.
+        max_episode_length (int, optional): maximum length of the episode (longer episodes will be cut short). Defaults to -1 (infinite).
+    """
+    iter = iterator(env, policy, mode=mode)
+    if max_episode_length > 0: # isslice doesnt reset automatically... (its a generator?)
+        while True:
+            for x in itertools.islice(iter, 0, max_episode_length):
+                yield x
+    else:
+        while True:
+            for x in iter:
+                yield x
+
 
 def episode(env, policy=None, mode=m.s, max_length=1000):
     """ 
@@ -141,29 +86,44 @@ def episodes(env, policy=None, mode=m.s, n=1, max_length=1000, workers=1):
     if workers == 1:
         return Episodes(env, policy=policy, mode=mode, n=n, max_length=max_length)
     else:
+        if not ray.is_initialized():
+            ray.init()
         assert n >= workers
-        assert isinstance(env, str) or callable(env) # avoid copy issues
-        workers = [EpisodesWorker.remote(env, policy=policy, mode=mode, n = n // workers, max_length=max_length) for _ in range(workers)]
-        return ray.util.iter.from_actors(workers).gather_async()
+        assert isinstance(env, str) or callable(env) # env must be str or callable to support multiprocessing.
+        workers = [EpisodesWorker.remote(env, policy=policy, mode=mode, n = int(n // workers), max_length=max_length) for _ in range(workers)]
+        return tqdm(ray.util.iter.from_actors(workers).gather_async(), total=n)
 
 class FuncRepeat:
     
     def __init__(self, fun, n=1):
         self.fun = fun
         self.n = n
-        if self.n < 0:
-            self.n = float("inf")
     
     def __iter__(self):
-        for i in range(self.n):
-            yield self.fun()
+        if self.n < 0:
+            while True:
+                yield self.fun()
+        else:
+            for i in range(self.n):
+                yield self.fun()
     
     def __len__(self):
         return self.n
-        
+
+def make_environment(env):
+    if isinstance(env, (gym.Env, gym.Wrapper)):
+        return env
+    elif isinstance(env, str):
+        return gym.make(env)
+    elif callable(env):
+        return env()
+    else:
+        raise ValueError(f"Invalid enironment {env}.")
+      
 class Episodes(FuncRepeat):
 
-    def __init__(self, env, policy= None, mode=m.s, n=1, max_length=1000):           
+    def __init__(self, env, policy=None, mode=m.s, n=1, max_length=1000):   
+        env = make_environment(env)
         def _episode():
             return episode(env, policy, mode=mode, max_length=max_length)
         super(Episodes, self).__init__(_episode, n=n) 
@@ -173,3 +133,22 @@ class EpisodesWorker(ray.util.iter.ParallelIteratorWorker):
     
     def __init__(self, *args, **kwargs):
         super().__init__(Episodes(*args, **kwargs), False)
+
+@ray.remote
+class StreamWorker(ray.util.iter.ParallelIteratorWorker):
+
+    def __init__(self, env, policy, mode=m.s, max_episode_length=-1, **kwargs):
+        env = make_environment(env)
+        stream_it = stream(env, policy, mode=mode, max_episode_length=max_episode_length, **kwargs)
+        super().__init__(stream_it, False)
+
+# TODO ??? this in favour of ray?? 
+def vectorize(envf, n=10, sync=False, shared_memory=False, daemon=True):
+    if isinstance(envf, str):
+        envf = lambda env=envf: gym.make(env)
+
+    if sync:
+        return gym.vector.SyncVectorEnv([envf] * n)
+    else:
+        return gym.vector.AsyncVectorEnv([envf] * n, shared_memory=shared_memory, daemon=daemon) 
+

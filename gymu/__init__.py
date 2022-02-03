@@ -19,8 +19,9 @@ from . import mode
 from . import policy
 from . import spaces
 from . import wrappers
+from . import utils
 
-__all__ = ('iterators', 'mode', 'policy', 'spaces', 'wrappers')
+__all__ = ('iterators', 'mode', 'policy', 'spaces', 'wrappers', 'utils')
 
 from .iterators import episode, episodes, iterator
 
