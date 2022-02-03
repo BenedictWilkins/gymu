@@ -30,7 +30,7 @@ class iterator:
         if policy is None:
             policy = uniform_policy(self.env.action_space)
         self.policy = policy
-        self.mode = mode
+        self.mode = m.mode(mode) # cast to correct type if not already a mode type
         
     def __iter__(self):
         state = self.env.reset()

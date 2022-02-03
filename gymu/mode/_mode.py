@@ -20,11 +20,33 @@ def pack(modes):
     return mode(*[np.array(d) for d in [i for i in zip(*modes)]])
 
 def mode(m):
-    return _meta_mode._cast_from(m)
+    return _cast_from(m)
 
-class _meta_mode(type):
+class _mode(tuple):
+
+    def __new__(cls, *data):
+        print(cls.__index__)
+        if len(data) != len(cls.__index__):
+            keys = tuple([MODE_PROPERTIES[i] for i in cls.__index__])
+            raise ValueError(f"Requires arguments to match {keys}.")
+        return tuple.__new__(cls, data)
+
+    def __str__(self):
+        return "mode-{0}".format(self.__class__.__name__)
+
+    def __repr__(self):
+        return str(self)
+
+    def items(self):
+        return dict(zip(self.keys(), self.values()))
     
-    MODE_INDEX = dict(   
+    def values(self):
+        return tuple([x for x in self])
+
+    def keys(self):
+        return tuple([MODE_PROPERTIES[i] for i in self.__index__])
+
+MODE_INDEX = dict(   
         # INDEX is based on the returned sequence of the gymu iterator step, which is, in order: state, action, next_state, reward, done, info
         s    = [0],            # state
         sr   = [0,3],          # state, reward
@@ -34,71 +56,47 @@ class _meta_mode(type):
         sas  = [0,1,2],        # state, action next_state
         sars = [0,1,3,2],      # state, action, reward, next_state
     )
-    MODE_INDEX.update({k + "d":v + [4] for k,v in MODE_INDEX.items()})
-    MODE_INDEX.update({k + "i":v + [5] for k,v in MODE_INDEX.items()}) 
-    
-    PROPERTIES = ['state', 'action', 'reward', 'next_state', 'done', 'info']
-    PROPERTIES_ALIAS = ['s', 'a', 'r', 's', 'd', 'i']
+MODE_INDEX.update({k + "d":v + [4] for k,v in MODE_INDEX.items()})
+MODE_INDEX.update({k + "i":v + [5] for k,v in MODE_INDEX.items()}) 
 
-    def __new__(cls, name, bases, dct):
-        if name != '_mode':
-            prop_map = dict(s='state', a='action', r='reward', d='done', i='info')
-            # add properties
-            for i, n in enumerate(name):
-                dct[prop_map[n]] = property(lambda self, j=i: self._data[j])
-                if n == 's': 
-                    prop_map['s'] = 'next_state'
-            # TODO create a suitable __init__ function for each subclass... 
-            
-            m = super().__new__(cls, name, bases, dct)
-            m.__index__ = _meta_mode.MODE_INDEX.get(name, None)
-            
-        else:
-            m = super().__new__(cls, name, bases, dct)
-        return m
+MODE_PROPERTIES = ('state', 'action', 'reward', 'next_state', 'done', 'info')
+MODE_PROPERTIES_ALIAS = ('s', 'a', 'r', 's', 'd', 'i')
 
-    def _cast_from(m):
-        c = None
-        subclasses = {c.__name__:c for c in _mode.__subclasses__()}
-        if isinstance(m, str):
-            c = subclasses.get(m, None)
-        elif hasattr(m, "__iter__"):
-            try:
-                indx = [_meta_mode.PROPERTIES.index(i) for i in m]
-            except:
-                raise TypeError(f"Cannot cast {m} to a valid mode, given values must be in {_meta_mode.PROPERTIES}")
-            c_str = "".join(_meta_mode.PROPERTIES_ALIAS[i] for i in indx)
-            c = subclasses.get(c_str, None)
-        if c is not None:
-            return c
-        raise TypeError(f"Cannot cast {m} to a valid mode.")
-    
-class _mode(metaclass=_meta_mode):
-
-    def __init__(self, *data):
-        self._data = data
-    
-    def __getitem__(self, index):
-        return self._data[index]
-    
-    def __iter__(self):
-        return self._data.__iter__()
-
-    def __str__(self):
-        return "mode-{0}".format(self.__class__.__name__)
-
-    def __repr__(self):
-        return str(self)
-    
-    def __len__(self):
-        return len(self._data)
-
-    def tuple(self): # convert to a python tuple
-        return self._data
+def _make_mode_class(name, index):
+    prop_map = dict(s='state', a='action', r='reward', d='done', i='info')
+    properties = {}
+    for i, n in enumerate(name):
+        properties[prop_map[n]] = property(lambda self, j=i: self[j])
+        if n == 's': 
+            prop_map['s'] = 'next_state'
+    # TODO create a suitable __init__ function for each subclass... ? 
+    cls = type(m, (_mode,), properties)
+    cls.__index__ = index
+    return cls
 
 # make mode subclasses
-for m, i in _meta_mode.MODE_INDEX.items():
-    cls = type(m, (_mode,), {})
+for m, i in MODE_INDEX.items():
+    cls = _make_mode_class(m, i)
     globals()[cls.__name__] = cls
     __all__.append(cls.__name__)
+
+def _cast_from(m):
+    if isinstance(m, _mode):
+        return m
+    c = None
+    subclasses = {c.__name__:c for c in _mode.__subclasses__()}
+    if isinstance(m, str):
+        c = subclasses.get(m, None)
+    elif hasattr(m, "__iter__"):
+        try:
+            indx = [MODE_PROPERTIES.index(i) for i in m]
+        except:
+            raise TypeError(f"Cannot cast {m} to a valid mode, given values must be in {MODE_PROPERTIES}")
+        c_str = "".join(MODE_PROPERTIES_ALIAS[i] for i in indx)
+        c = subclasses.get(c_str, None)
+    if c is not None:
+        return c
+    raise TypeError(f"Cannot cast {m} to a valid mode.")
+
+
 
