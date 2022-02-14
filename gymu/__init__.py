@@ -20,8 +20,9 @@ from . import policy
 from . import spaces
 from . import wrappers
 from . import utils
+from . import data
 
-__all__ = ('iterators', 'mode', 'policy', 'spaces', 'wrappers', 'utils')
+__all__ = ('iterators', 'mode', 'policy', 'spaces', 'wrappers', 'utils', 'data')
 
 from .iterators import episode, episodes, iterator
 

@@ -24,11 +24,20 @@ def mode(m):
 
 class _mode(tuple):
 
-    def __new__(cls, *data):
-        print(cls.__index__)
+    def __new__(cls, *data, **kwdata):
+        if len(data) > 0 and len(kwdata) > 0:
+            raise ValueError("Mode arguments cannot be combined, specify either data or kwdata.")
+        
+        keys = tuple([MODE_PROPERTIES[i] for i in cls.__index__])
+        if len(kwdata) > 0: # construct from dictionary
+            if len(keys) != len(kwdata.keys()) or not all([x in keys for x in kwdata.keys()]):
+                raise ValueError(f"Invalid keys {list(kwdata.keys())} specified for mode {cls}, must match {list(keys)}.")
+            data = [x[1] for x in sorted(kwdata.items(), key = lambda x: MODE_PROPERTIES.index(x[0]))]
+
         if len(data) != len(cls.__index__):
-            keys = tuple([MODE_PROPERTIES[i] for i in cls.__index__])
-            raise ValueError(f"Requires arguments to match {keys}.")
+            if len(data) > 0 and isinstance(data[0], (list, tuple, dict)): 
+                raise ValueError(f"Invalid argument type {type(data[0])} did you forget to unpack with * or ** ?")
+            raise ValueError(f"Requires {len(cls.__index__)} arguments  to match {keys}, only {len(data)} were supplied.")
         return tuple.__new__(cls, data)
 
     def __str__(self):
@@ -38,7 +47,7 @@ class _mode(tuple):
         return str(self)
 
     def items(self):
-        return dict(zip(self.keys(), self.values()))
+        return zip(self.keys(), self.values())
     
     def values(self):
         return tuple([x for x in self])
@@ -89,7 +98,7 @@ def _cast_from(m):
         c = subclasses.get(m, None)
     elif hasattr(m, "__iter__"):
         try:
-            indx = [MODE_PROPERTIES.index(i) for i in m]
+            indx = sorted([MODE_PROPERTIES.index(i) for i in m])
         except:
             raise TypeError(f"Cannot cast {m} to a valid mode, given values must be in {MODE_PROPERTIES}")
         c_str = "".join(MODE_PROPERTIES_ALIAS[i] for i in indx)

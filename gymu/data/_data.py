@@ -12,10 +12,29 @@ __status__ = "Development"
 import h5py
 from tqdm.auto import tqdm
 
-def write_episodes(path, episodes):
-    with h5py.File(path, "a") as f:
+from ..mode import mode
+
+__all__ = ('write_episodes', 'read_episodes')
+
+def write_episodes(path, episodes, compression="gzip", write_mode="w", show_progress=False):
+    with h5py.File(path, write_mode) as f:
         offset = len(list(f.keys()))
-        for i, data in enumerate(tqdm(episodes)):
+        iter = tqdm(episodes, "Writing episodes:") if show_progress else episodes
+        for i, data in enumerate(iter):
             g = f.create_group(f"ep-{str(offset + i).zfill(4)}")
             for k,v in data.items():
-                g.create_dataset(k.lower(), data=v, compression="gzip")
+                g.create_dataset(k.lower(), data=v, compression=compression)
+
+def read_episodes(path, lazy=True, show_progress=False):
+    with h5py.File(path) as f:
+        def _load_lazy(group):
+            cls = mode(list(group.keys()))
+            return cls(**{k:group[k] for k in group.keys()})
+        def _load(group):
+            cls = mode(list(group.keys()))
+            return cls(**{k:group[k][...] for k in group.keys()})
+        load = _load_lazy if lazy else _load
+        iter = tqdm(f.keys(), desc="Reading episodes:") if show_progress else f.keys()
+        return [load(f[k]) for k in iter]
+
+
