@@ -9,12 +9,15 @@ __author__ = "Benedict Wilkins"
 __email__ = "benrjw@gmail.com"
 __status__ = "Development"
 
+
 import h5py
+import numpy as np 
+from collections import OrderedDict
 from tqdm.auto import tqdm
 
-from ..mode import mode
-
 __all__ = ('write_episodes', 'read_episodes')
+
+# DEPRECATED? use _tar instead?
 
 def write_episodes(path, episodes, compression="gzip", write_mode="w", show_progress=False):
     with h5py.File(path, write_mode) as f:
@@ -23,18 +26,29 @@ def write_episodes(path, episodes, compression="gzip", write_mode="w", show_prog
         for i, data in enumerate(iter):
             g = f.create_group(f"ep-{str(offset + i).zfill(4)}")
             for k,v in data.items():
-                g.create_dataset(k.lower(), data=v, compression=compression)
+                g.create_dataset(k.lower(), data=v[...], compression=compression)
 
-def read_episodes(path, lazy=True, show_progress=False):
-    with h5py.File(path) as f:
-        def _load_lazy(group):
-            cls = mode(list(group.keys()))
-            return cls(**{k:group[k] for k in group.keys()})
-        def _load(group):
-            cls = mode(list(group.keys()))
-            return cls(**{k:group[k][...] for k in group.keys()})
-        load = _load_lazy if lazy else _load
-        iter = tqdm(f.keys(), desc="Reading episodes:") if show_progress else f.keys()
-        return [load(f[k]) for k in iter]
+def read_episodes(path, lazy=False, show_progress=False):
+    f = h5py.File(path)
+    def _load_lazy(group):
+        return {k:group[k] for k in group.keys()}
+    def _load(group):
+        return {k:group[k][...] for k in group.keys()}
+    
+    iter = tqdm(f.keys(), desc="Reading episodes:") if show_progress else f.keys()
+    if lazy:
+        return [_load_lazy(f[k]) for k in iter], f
+    else:
+        return [_load(f[k]) for k in iter]
+
+
+
+
+
+
+    
+
+
+
 
 

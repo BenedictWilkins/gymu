@@ -9,8 +9,10 @@ __author__ ="Benedict Wilkins"
 __email__ = "benrjw@gmail.com"
 __status__ ="Development"
 
+from collections.abc import Iterable
 import itertools
 import gym
+import sys
 from numpy.lib.arraysetops import isin
 import ray
 from tqdm.auto import tqdm
@@ -18,14 +20,16 @@ from tqdm.auto import tqdm
 from .. import mode as m
 from ..policy import Uniform as uniform_policy
 
-class iterator:
+__all__ = ("iterator", "stream", "episode", "episodes")
 
-    def __init__(self, env, policy=None, mode=m.s):
+class iterator(Iterable):
+
+    def __init__(self, env, policy=None, mode=m.s, max_length=sys.maxsize):
         if isinstance(env, str):
             env = gym.make(env)
         elif not isinstance(env, gym.Env) and callable(env):
             env = env() # create a new environment, useful for parallelism (to avoid copy issues)
-
+        self.max_length = max_length
         self.env = env
         if policy is None:
             policy = uniform_policy(self.env.action_space)
@@ -35,14 +39,18 @@ class iterator:
     def __iter__(self):
         state = self.env.reset()
         done = False
+        i = 0
         while not done:
             action = self.policy(state)
-            # state, action, next_state, reward, done, info
-            result = [state, action, *self.env.step(action)] 
-            yield self.mode(*[result[i] for i in self.mode.__index__])
-            state = result[2]
+            # state, action, reward, next_state, done, info
+            next_state, reward, done, info = self.env.step(action)
+            i += 1
+            done = done or i >= self.max_length
+            
 
-            done = result[4]
+            result = (state, action, reward, next_state, done, info) # S_t, A_t, R_{t+1}, S_{t+1}, done_{t+1}, info_{t+1}
+            yield self.mode(*[result[i] for i in self.mode.__index__])
+            state = next_state
 
 def stream(env, policy=None, mode=m.s, max_episode_length=-1):
     """ Stream the environment, resetting whenever needed (or according to max_episode_length).
@@ -53,18 +61,13 @@ def stream(env, policy=None, mode=m.s, max_episode_length=-1):
         mode (mode, optional): mode (see gym_mp.mode). Defaults to state mode.
         max_episode_length (int, optional): maximum length of the episode (longer episodes will be cut short). Defaults to -1 (infinite).
     """
-    iter = iterator(env, policy, mode=mode)
-    if max_episode_length > 0: # isslice doesnt reset automatically... (its a generator?)
-        while True:
-            for x in itertools.islice(iter, 0, max_episode_length):
-                yield x
-    else:
-        while True:
-            for x in iter:
-                yield x
+    iter = iterator(env, policy, mode=mode, max_length=max_episode_length)
+    while True:
+        for x in iter:
+            yield x
 
 
-def episode(env, policy=None, mode=m.s, max_length=1000):
+def episode(env, policy=None, mode=m.s, max_length=10000):
     """ 
         Creates an episode from the given environment and policy.
 
@@ -72,16 +75,15 @@ def episode(env, policy=None, mode=m.s, max_length=1000):
         env (gym.Env): environment.
         policy (Policy, optional): policy. Defaults to a uniform random policy.
         mode (mode, optional): mode (see gym_mp.mode). Defaults to state mode.
-        max_length (int, optional): maximum length of the episode (longer episodes will be cut short). Defaults to 1000.
+        max_length (int, optional): maximum length of the episode (longer episodes will be cut short). Defaults to 10000.
 
     Returns:
         tuple([numpy.ndarray, ...]): episode as a collection of numpy ndarrays (1 for each mode component).
     """
-    it = iterator(env, policy, mode=mode)
-    it = itertools.islice(it, 0, max_length)
+    it = iterator(env, policy, mode=mode, max_length=max_length)
     return m.pack(it)
 
-def episodes(env, policy=None, mode=m.s, n=1, max_length=1000, workers=1):
+def episodes(env, policy=None, mode=m.s, n=1, max_length=10000, workers=1):
     assert workers >= 1
     if workers == 1:
         return Episodes(env, policy=policy, mode=mode, n=n, max_length=max_length)

@@ -24,6 +24,6 @@ setup(name='gymu',
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
       ],
-      install_requires=['gym', 'numpy', 'ray[tune]'],
+      install_requires=['gym', 'numpy', 'ray[tune]', 'more_itertools'],
       include_package_data=True,
       packages=find_packages())

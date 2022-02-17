@@ -9,11 +9,5 @@ __author__ = "Benedict Wilkins"
 __email__ = "benrjw@gmail.com"
 __status__ = "Development"
 
-import itertools
-import gym
-import ray
 
-from .. import mode as m
-from ..policy import Uniform as uniform_policy
-
-from .base import *
+from ._iterator import *

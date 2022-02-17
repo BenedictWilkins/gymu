@@ -10,7 +10,13 @@ __email__ = "benrjw@gmail.com"
 __status__ = "Development"
 
 from ._data import *
+
 try: 
     from ._lightning import *
 except ModuleNotFoundError as e:
     pass # pytorch lightning is not installed... thats ok
+
+try: 
+    from ._torch import *
+except ModuleNotFoundError as e:
+    pass # pytorch is not installed ... thats ok

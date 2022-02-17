@@ -10,7 +10,7 @@ __email__ = "benrjw@gmail.com"
 __status__ = "Development"
 
 from re import L
-from typing import Callable, List
+from typing import Callable, List, Union
 from tqdm.auto import tqdm
 
 import h5py
@@ -23,7 +23,6 @@ import gym
 from torch.utils.data import Dataset, TensorDataset, ConcatDataset, DataLoader
 from pytorch_lightning import LightningDataModule
 
-from .. import iterators
 from ._data import read_episodes, write_episodes
 
 __all__ = ("GymDataModule",)
@@ -31,7 +30,7 @@ __all__ = ("GymDataModule",)
 class GymDataModule(LightningDataModule):
 
     def __init__(self, 
-                env_id : str,
+                env_id : Union[str, Callable],
                 policy = None,
                 mode : List[str] = ['state', 'action'], 
                 num_train_episodes : int = 50,
@@ -42,7 +41,13 @@ class GymDataModule(LightningDataModule):
 
         super().__init__()
         self.env_id = env_id
-        env = gym.make(self.env_id)
+        if isinstance(self.env_id, str):
+            env = gym.make(self.env_id)
+        elif callable(env_id):
+            env = env_id()
+        else:
+            raise TypeError(f"Invalid environment {env_id}.")
+
         self.state_space = env.observation_space
         self.action_space = env.action_space
         try:
@@ -59,9 +64,8 @@ class GymDataModule(LightningDataModule):
         self.max_episode_length = max_episode_length
         self.batch_size = batch_size
 
-
     def episodes(self, n, workers=1, show_progress=False):
-        iterator = iterators.episodes(self.env_id, policy=self.policy, n=n, mode=self.mode, max_length=self.max_episode_length, workers=workers)     
+        iterator = iterator.episodes(self.env_id, policy=self.policy, n=n, mode=self.mode, max_length=self.max_episode_length, workers=workers)     
         iterator = tqdm(iterator, total=n) if show_progress else iterator
         episodes = [type(ep)(*[torch.from_numpy(x) for x in ep]) for ep in iterator]
         return episodes
@@ -73,7 +77,7 @@ class GymDataModule(LightningDataModule):
         if not path.exists() or force:
             write_episodes(path, [], write_mode="w") # overwrite the original file
             # create and save one episode at a time to avoid running out of memory...
-            iterator = iterators.episodes(self.env_id, policy=self.policy, n=n, mode=self.mode, max_length=self.max_episode_length, workers=workers)
+            iterator = iterator.episodes(self.env_id, policy=self.policy, n=n, mode=self.mode, max_length=self.max_episode_length, workers=workers)
             write_episodes(path, iterator, compression=compression, write_mode="w", show_progress=show_progress)
         else:
             raise FileExistsError(f"File {str(path)} already exists.")

@@ -14,7 +14,7 @@ import gym
 import ray
 import itertools
 
-from . import iterators
+from . import iterator
 from . import mode
 from . import policy
 from . import spaces
@@ -22,9 +22,13 @@ from . import wrappers
 from . import utils
 from . import data
 
-__all__ = ('iterators', 'mode', 'policy', 'spaces', 'wrappers', 'utils', 'data')
+__all__ = ('iterator', 'mode', 'policy', 'spaces', 'wrappers', 'utils', 'data')
 
-from .iterators import episode, episodes, iterator
+from .iterator import episode, episodes, iterator
+
+
+
+
 
 def make(env_id, **kwargs):
     return gym.make(env_id, **kwargs)
@@ -78,7 +82,7 @@ def mp_episodes(env, policy=lambda: None, mode=mode.s, workers=1, n=1, max_lengt
 
     class iterator: 
         def __iter__(self):
-            return iterators.episodes(env(), policy(), mode=mode, n=n, max_length=max_length)
+            return iterator.episodes(env(), policy(), mode=mode, n=n, max_length=max_length)
 
     it = ray.util.iter.from_iterators([iterator() for _ in range(workers)])
     return it
@@ -168,7 +172,7 @@ def mp_iterator(env, policy, mode=mode.s, workers=2, repeat=False):
 
     class iterator: 
         def __iter__(self):
-            return iter(iterators.iterator(env(), policy(), mode=mode))
+            return iter(iterator.iterator(env(), policy(), mode=mode))
 
     it = ray.util.iter.from_iterators([iterator() for _ in range(workers)], repeat=repeat)
     return it
