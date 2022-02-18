@@ -18,7 +18,7 @@ from tqdm.auto import tqdm
 from itertools import groupby
 from more_itertools import pairwise, windowed
 
-from ...mode import STATE, NEXT_STATE, DONE
+from ...mode import STATE, NEXT_STATE, ACTION, REWARD, DONE, INFO
 
 __all__ = ("write_episode", "Composable")
 
@@ -49,14 +49,20 @@ def write_episode(iterator, path="./episode/"):
 
 class Composable:
 
-    def decode():
-        def _decode(source):
+    def decode(keep_meta=False):
+        def _decode_keep_meta(source):
             for data in source:
                 x = {k:v for k,v in  np.load(io.BytesIO(data['npz']), allow_pickle=True).items()}
                 del data['npz']
                 x.update(data)
                 yield x
-        return _decode
+        def _decode(source):
+            for data in source:
+                yield {k:v for k,v in  np.load(io.BytesIO(data['npz']), allow_pickle=True).items()}
+        if keep_meta:
+            return _decode_keep_meta
+        else:
+            return _decode
 
     def mode(mode, ignore_last=True): 
         def _mode_without_next_state(source):
@@ -81,7 +87,7 @@ class Composable:
         else:
             return _mode_without_next_state
 
-    def keep(keys): # keep only these keys
+    def keep(keys=[STATE, NEXT_STATE, ACTION, REWARD, DONE, INFO]): # keep only these keys
         def _keep(source):
             for x in source:
                 yield {k:x[k] for k in keys}

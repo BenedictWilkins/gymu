@@ -15,11 +15,11 @@ import numpy as np
 from collections import OrderedDict
 from tqdm.auto import tqdm
 
-__all__ = ('write_episodes', 'read_episodes')
+__all__ = ('write_episodes_hdf5', 'read_episodes_hdf5')
 
 # DEPRECATED? use _tar instead?
 
-def write_episdoes_hdf5(path, episodes, compression="gzip", write_mode="w", show_progress=False):
+def write_episodes_hdf5(path, episodes, compression="gzip", write_mode="w", show_progress=False):
     with h5py.File(path, write_mode) as f:
         offset = len(list(f.keys()))
         iter = tqdm(episodes, "Writing episodes:") if show_progress else episodes
