@@ -19,7 +19,7 @@ __all__ = ('write_episodes', 'read_episodes')
 
 # DEPRECATED? use _tar instead?
 
-def write_episodes(path, episodes, compression="gzip", write_mode="w", show_progress=False):
+def write_episdoes_hdf5(path, episodes, compression="gzip", write_mode="w", show_progress=False):
     with h5py.File(path, write_mode) as f:
         offset = len(list(f.keys()))
         iter = tqdm(episodes, "Writing episodes:") if show_progress else episodes
@@ -28,7 +28,7 @@ def write_episodes(path, episodes, compression="gzip", write_mode="w", show_prog
             for k,v in data.items():
                 g.create_dataset(k.lower(), data=v[...], compression=compression)
 
-def read_episodes(path, lazy=False, show_progress=False):
+def read_episodes_hdf5(path, lazy=False, show_progress=False):
     f = h5py.File(path)
     def _load_lazy(group):
         return {k:group[k] for k in group.keys()}
