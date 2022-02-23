@@ -28,6 +28,7 @@ setup(name='gymu',
                         'numpy', 
                         'scikit-image',
                         'ray[tune]', 
+                        'h5py',
                         'more_itertools'],
       include_package_data=True,
       packages=find_packages())
