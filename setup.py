@@ -16,7 +16,7 @@ from setuptools import setup, find_packages
 setup(name='gymu',
       version='0.0.1',
       description='Useful utilities for OpenAI gym.',
-      url='https://github.com/BenedictWilkinsAI/gym-mp',
+      url='https://github.com/BenedictWilkinsAI/gymu',
       author='Benedict Wilkins',
       author_email='brjw@hotmail.co.uk',
       license='GNU3',
