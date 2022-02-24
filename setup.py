@@ -29,6 +29,7 @@ setup(name='gymu',
                         'scikit-image',
                         'ray[tune]', 
                         'h5py', # todo remove?
+                        'tqdm',
                         'more_itertools'],
       include_package_data=True,
       packages=find_packages())

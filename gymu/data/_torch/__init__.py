@@ -13,4 +13,5 @@ from ._tar import *
 try:
     from ._webdataset import *
 except ModuleNotFoundError as e:
+    print(e)
     pass # webdataset is not installed ... thats ok

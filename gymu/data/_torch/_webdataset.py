@@ -21,7 +21,6 @@ from typing import List
 from tqdm.auto import tqdm
 from torch.utils.data import IterableDataset, TensorDataset, DataLoader
 
-
 from ...mode import STATE, NEXT_STATE, ACTION, REWARD, DONE, INFO
 from ...utils import overload
 from . import iterators
@@ -61,8 +60,7 @@ class _GymuShorthands:
         import torch.multiprocessing
         torch.multiprocessing.set_sharing_strategy('file_system')                                  
         source = DataLoader(self.source, batch_size=512, shuffle=False, num_workers=num_workers)   
-        source = source if not show_progress else tqdm(source, desc="Loading Tensor Dataset")      
-        #print("TESTING GYMU")                                                                      
+        source = source if not show_progress else tqdm(source, desc="Loading Tensor Dataset")                                                                          
         source = iter(source)                                                                       
         tensors = [[z] for z in next(source)]                                                       
         for x in source:                                                                            
