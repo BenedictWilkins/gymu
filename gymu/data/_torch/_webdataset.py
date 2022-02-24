@@ -64,10 +64,10 @@ class _GymuShorthands:
         source = source if not show_progress else tqdm(source, desc="Loading Tensor Dataset")
 
         source = iter(source)
-        tensors = [[torch.from_numpy(z)] for z in next(source)]
+        tensors = [[z] for z in next(source)]
         for x in source:
             for z,t in zip(x, tensors):
-                t.append(torch.from_numpy(z))
+                t.append(z)
         tensors = [torch.stack(z) for z in tensors] 
         # otherwise do this... tensors = [np.stack(z) for z in zip(*[x for x in source])] 
         return TensorDataset(*tensors)
