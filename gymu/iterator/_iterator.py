@@ -37,7 +37,7 @@ class iterator(Iterable):
         self.mode = m.mode(mode) # cast to correct type if not already a mode type
         
     def __iter__(self):
-        state = self.env.reset()
+        state, *_ = self.env.reset()
         done = False
         i = 0
         while not done:
@@ -46,8 +46,6 @@ class iterator(Iterable):
             next_state, reward, done, info = self.env.step(action)
             i += 1
             done = done or i >= self.max_length
-            
-
             result = (state, action, reward, next_state, done, info) # S_t, A_t, R_{t+1}, S_{t+1}, done_{t+1}, info_{t+1}
             yield self.mode(*[result[i] for i in self.mode.__index__])
             state = next_state

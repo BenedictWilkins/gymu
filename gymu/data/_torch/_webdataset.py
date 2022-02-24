@@ -62,8 +62,14 @@ class _GymuShorthands:
         torch.multiprocessing.set_sharing_strategy('file_system')
         source = DataLoader(self.source, batch_size=None, shuffle=False, num_workers=num_workers)
         source = source if not show_progress else tqdm(source, desc="Loading Tensor Dataset")
-        tensors = [np.stack(z) for z in zip(*[x for x in source])] 
-        tensors = [torch.from_numpy(x) for x in tensors]
+
+        source = iter(source)
+        tensors = [[torch.from_numpy(z)] for z in next(source)]
+        for x in source:
+            for z,t in zip(x, tensors):
+                t.append(torch.from_numpy(z))
+        tensors = [torch.stack(z) for z in tensors] 
+        # otherwise do this... tensors = [np.stack(z) for z in zip(*[x for x in source])] 
         return TensorDataset(*tensors)
 
 class _WebDatasetIterable(IterableDataset, GymuShorthands, wb.Composable, wb.Shorthands):
