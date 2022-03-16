@@ -17,6 +17,8 @@ from numpy.lib.arraysetops import isin
 import ray
 from tqdm.auto import tqdm
 
+from typing import Union, Callable, List, Dict
+
 from .. import mode as m
 from ..policy import Uniform as uniform_policy
 
@@ -24,7 +26,12 @@ __all__ = ("iterator", "stream", "episode", "episodes")
 
 class iterator(Iterable):
 
-    def __init__(self, env, policy=None, mode=m.s, max_length=sys.maxsize):
+    def __init__(self, env : Union[str, gym.Env, gym.Wrapper], 
+                        policy : Callable = None, 
+                        mode : Union[List[str], str] = m.s, 
+                        max_length : int = sys.maxsize, 
+                        reset_return_multiple : bool = False):
+      
         if isinstance(env, str):
             env = gym.make(env)
         elif not isinstance(env, gym.Env) and callable(env):
@@ -35,9 +42,9 @@ class iterator(Iterable):
             policy = uniform_policy(self.env.action_space)
         self.policy = policy
         self.mode = m.mode(mode) # cast to correct type if not already a mode type
-        
+
     def __iter__(self):
-        state, *_ = self.env.reset()
+        state = self.env.reset()
         done = False
         i = 0
         while not done:

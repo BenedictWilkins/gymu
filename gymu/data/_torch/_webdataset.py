@@ -70,9 +70,6 @@ class _GymuShorthands:
         # otherwise do this... tensors = [np.stack(z) for z in zip(*[x for x in source])]           
         return TensorDataset(*tensors)      
 
-
-
-       
 class _WebDatasetIterable(IterableDataset, GymuShorthands, wb.Composable, wb.Shorthands):
    
     def __init__(self, iterator):
@@ -87,6 +84,7 @@ def dataset(*args, **kwargs):
 
 @dataset.args(List)
 def dataset(path: List, **kwargs):
+    path = [str(p) for p in path]
     return _WebDatasetIterable(wb.WebDataset(path, **kwargs))
 
 @dataset.args(str)

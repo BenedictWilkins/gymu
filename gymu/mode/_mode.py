@@ -37,7 +37,7 @@ MODE_PROPERTIES = {STATE:0, ACTION:1, REWARD:2, NEXT_STATE:3, DONE:4, INFO:5, OB
 MODE_PROPERTIES_DEFAULT = (STATE, ACTION, REWARD, NEXT_STATE, DONE, INFO)
 MODE_PROPERTIES_ALIAS = ('s', 'a', 'r', 's', 'd', 'i')
 
-class _mode(tuple):
+class Mode(tuple):
 
     def __new__(cls, *data, **kwdata):
         if len(data) > 0 and len(kwdata) > 0:
@@ -45,8 +45,6 @@ class _mode(tuple):
         
         if len(kwdata) > 0: # construct from dictionary
             keys = tuple([MODE_PROPERTIES_DEFAULT[i] for i in cls.__index__])
-
-        
             if len(keys) != len(kwdata.keys()):
                 raise ValueError(f"Invalid keys {list(kwdata.keys())} specified for mode {cls}, must match {list(keys)}.")
             data = [x[1] for x in sorted(kwdata.items(), key = lambda x: MODE_PROPERTIES[x[0]])]
@@ -63,7 +61,7 @@ class _mode(tuple):
         if isinstance(i, int):
             return super().__getitem__(i)
         elif isinstance(i, str):
-            return dict(self.items())[i] # a bit slow...
+            return dict(self.items())[i] # TODO a bit slow...
 
     def __str__(self):
         return "mode-{0}".format(self.__class__.__name__)

@@ -9,6 +9,7 @@ __author__ ="Benedict Wilkins"
 __email__ = "benrjw@gmail.com"
 __status__ ="Development"
 
+# DEPRECATED!
 
 import gym
 from .. import mode as m
