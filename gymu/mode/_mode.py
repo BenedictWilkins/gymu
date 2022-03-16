@@ -11,7 +11,7 @@ __status__ = "Development"
 
 import numpy as np
 
-__all__ = ['pack', 'mode', 'Mode'
+__all__ = ['pack', 'mode', 'Mode',
             "STATE", "ACTION", "REWARD", "NEXT_STATE", "DONE", "INFO", "OBSERVATION", "NEXT_OBSERVATION"]
 
 # MODE_INDEX is based on the returned sequence of the gymu iterator step, which is, in order: state, action, reward, next_state, done, info
