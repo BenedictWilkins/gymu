@@ -28,7 +28,7 @@ class iterator(Iterable):
 
     def __init__(self, env : Union[str, gym.Env, gym.Wrapper], 
                         policy : Callable = None, 
-                        mode : Union[List[str], str] = m.s, 
+                        mode : Union[m.Mode, List[str], str] = m.s, 
                         max_length : int = sys.maxsize, 
                         reset_return_multiple : bool = False):
       

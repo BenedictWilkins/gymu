@@ -11,9 +11,7 @@ __status__ = "Development"
 
 import numpy as np
 
-
-
-__all__ = ['pack', 'mode', 
+__all__ = ['pack', 'mode', 'Mode'
             "STATE", "ACTION", "REWARD", "NEXT_STATE", "DONE", "INFO", "OBSERVATION", "NEXT_OBSERVATION"]
 
 # MODE_INDEX is based on the returned sequence of the gymu iterator step, which is, in order: state, action, reward, next_state, done, info
@@ -37,7 +35,7 @@ MODE_PROPERTIES = {STATE:0, ACTION:1, REWARD:2, NEXT_STATE:3, DONE:4, INFO:5, OB
 MODE_PROPERTIES_DEFAULT = (STATE, ACTION, REWARD, NEXT_STATE, DONE, INFO)
 MODE_PROPERTIES_ALIAS = ('s', 'a', 'r', 's', 'd', 'i')
 
-class Mode(tuple):
+class _mode(tuple):
 
     def __new__(cls, *data, **kwdata):
         if len(data) > 0 and len(kwdata) > 0:
@@ -61,7 +59,7 @@ class Mode(tuple):
         if isinstance(i, int):
             return super().__getitem__(i)
         elif isinstance(i, str):
-            return dict(self.items())[i] # TODO a bit slow...
+            return dict(self.items())[i] # TODOa bit slow...
 
     def __str__(self):
         return "mode-{0}".format(self.__class__.__name__)
@@ -106,6 +104,8 @@ def _cast_from(m):
         return subclasses.get(c_str)
     else: 
         raise TypeError(f"Cannot cast {m} to a valid mode.")
+
+Mode = _mode # type alias 
 
 def pack(modes):
     """ Pack a list of modes into numpy arrays. """
