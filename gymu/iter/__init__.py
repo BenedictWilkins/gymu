@@ -11,3 +11,6 @@ __status__ = "Development"
 
 
 from ._iterator import *
+from ._intercept import *
+
+from . import _intercept as intercept

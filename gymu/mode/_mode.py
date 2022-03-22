@@ -11,7 +11,7 @@ __status__ = "Development"
 
 import numpy as np
 
-__all__ = ['pack', 'mode', 'Mode',
+__all__ = ['pack', 'mode', #'Mode',
             "STATE", "ACTION", "REWARD", "NEXT_STATE", "DONE", "INFO", "OBSERVATION", "NEXT_OBSERVATION"]
 
 # MODE_INDEX is based on the returned sequence of the gymu iterator step, which is, in order: state, action, reward, next_state, done, info
@@ -105,7 +105,7 @@ def _cast_from(m):
     else: 
         raise TypeError(f"Cannot cast {m} to a valid mode.")
 
-Mode = _mode # type alias 
+#Mode = _mode # type alias 
 
 def pack(modes):
     """ Pack a list of modes into numpy arrays. """

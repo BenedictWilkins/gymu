@@ -56,18 +56,17 @@ class _GymuShorthands:
     def window(self, window_size=2):
         return self.source.then(iterators.window, window_size=window_size)
 
-    def to_tensor_dataset(self, num_workers=1, show_progress=False): # WARNING YOU MIGHT RUN OUT OF MEMORY ;)
+    def to_tensor_dataset(self, num_workers=0, show_progress=False): # WARNING YOU MIGHT RUN OUT OF MEMORY ;)
         import torch.multiprocessing
         torch.multiprocessing.set_sharing_strategy('file_system')                                  
-        source = DataLoader(self.source, batch_size=512, shuffle=False, num_workers=num_workers)   
+        source = DataLoader(self.source, batch_size=512, shuffle=False, num_workers=num_workers, drop_last=False)   
         source = source if not show_progress else tqdm(source, desc="Loading Tensor Dataset")                                                                          
         source = iter(source)                                                                       
-        tensors = [[z] for z in next(source)]                                                       
-        for x in source:                                                                            
-            for z,t in zip(x, tensors):                                                             
-                t.append(z)                                                                         
-        tensors = [torch.cat(z,dim=0) for z in tensors]                                             
-        # otherwise do this... tensors = [np.stack(z) for z in zip(*[x for x in source])]           
+        tensors = [[y] for y in next(source)]                     
+        for x in source:                                                                          
+            for z,t in zip(x, tensors):                                          
+                t.append(z)                             
+        tensors = [torch.cat(z,dim=0) for z in tensors]  # TODO this uses double memory... perhaps we need to specify a max size?                                                     
         return TensorDataset(*tensors)      
 
 class _WebDatasetIterable(IterableDataset, GymuShorthands, wb.Composable, wb.Shorthands):

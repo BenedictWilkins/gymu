@@ -41,7 +41,7 @@ def write_episode(iterator, path="./episode/"):
     with tarfile.open(str(path_tar), "w:gz") as tar:
         for i, x in enumerate(tqdm(iterator)):
             file = pathlib.Path(path, str(i).zfill(8) + ".npz")
-            for k, v in dict(x).items():
+            for k, v in dict(x).items():        
                 if v is None:
                     del x[k]
             np.savez(file, **x)

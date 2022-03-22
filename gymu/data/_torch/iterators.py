@@ -62,7 +62,6 @@ def window(source, window_size=2):
     iterator = more_itertools.windowed(source, window_size)
     for x in iterator:
         k = x[0].keys()
-        print([z['__key__'] for z in x])
         done = x[-1].get(DONE, False) # TODO if done isnt present... give a warning? we might overlap into other episodes!
         x = [z.values() for z in x]
         yield dict(zip(k, [np.stack(z) for z in zip(*x)]))

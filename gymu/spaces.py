@@ -3,7 +3,7 @@
 """
     Created on 16-09-2020 13:28:00
 
-    [Description]
+    DEPRECATED?
 """
 __author__ = "Benedict Wilkins"
 __email__ = "benrjw@gmail.com"
@@ -33,6 +33,10 @@ class OneHot(gym.Space):
 
     def __repr__(self):
         return "OneHot(%d)" % self.size
+
+
+
+
 
 class NumpyBox(gym.spaces.Box):
     

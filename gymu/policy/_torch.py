@@ -10,15 +10,13 @@ __email__ = "benrjw@gmail.com"
 __status__ ="Development"
 
 import torch
-from . import base
+from . import _base
 
-class NeuralPolicy(DiscretePolicy):
+class NeuralPolicy(_base.DiscretePolicy): # TODO
 
-    def __init__(self, action_space, nn, p=lambda x: x, dtype=np.int64):
-        super(NeuralPolicy, self).__init__(action_Space, dtype=dtype)
-        self.nn = nn
-        self.p = p
-    
+    def __init__(self, action_space):
+        super(NeuralPolicy, self).__init__(action_space)
+
     def sample(self, *args, **kwargs):
         v = self.nn(*args, **kwargs)
         p = self.p(v)

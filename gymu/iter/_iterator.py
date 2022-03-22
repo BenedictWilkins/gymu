@@ -13,7 +13,6 @@ from collections.abc import Iterable
 import itertools
 import gym
 import sys
-from numpy.lib.arraysetops import isin
 import ray
 from tqdm.auto import tqdm
 
@@ -22,13 +21,13 @@ from typing import Union, Callable, List, Dict
 from .. import mode as m
 from ..policy import Uniform as uniform_policy
 
-__all__ = ("iterator", "stream", "episode", "episodes")
+__all__ = ("iterator", "Iterator", "stream", "episode", "episodes")
 
 class iterator(Iterable):
 
     def __init__(self, env : Union[str, gym.Env, gym.Wrapper], 
                         policy : Callable = None, 
-                        mode : Union[m.Mode, List[str], str] = m.s, 
+                        mode : Union[List[str], str] = m.s, 
                         max_length : int = sys.maxsize, 
                         reset_return_multiple : bool = False):
       
@@ -39,15 +38,17 @@ class iterator(Iterable):
         self.max_length = max_length
         self.env = env
         if policy is None:
-            policy = uniform_policy(self.env.action_space)
+            policy = uniform_policy(self.env)
         self.policy = policy
         self.mode = m.mode(mode) # cast to correct type if not already a mode type
 
     def __iter__(self):
+        #import times
         state = self.env.reset()
         done = False
         i = 0
         while not done:
+            #time.sleep(0.1)
             action = self.policy(state)
             # state, action, reward, next_state, done, info
             next_state, reward, done, info = self.env.step(action)
@@ -56,6 +57,12 @@ class iterator(Iterable):
             result = (state, action, reward, next_state, done, info) # S_t, A_t, R_{t+1}, S_{t+1}, done_{t+1}, info_{t+1}
             yield self.mode(*[result[i] for i in self.mode.__index__])
             state = next_state
+
+Iterator = iterator
+
+class InterceptIterator(iterator):
+    pass 
+
 
 def stream(env, policy=None, mode=m.s, max_episode_length=-1):
     """ Stream the environment, resetting whenever needed (or according to max_episode_length).

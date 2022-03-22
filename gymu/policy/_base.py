@@ -10,10 +10,9 @@ __email__ = "benrjw@gmail.com"
 __status__ ="Development"
 
 from abc import ABC, abstractmethod
-import numpy as np
 import gym
 
-from .. import spaces
+__all__ = ("Policy", "DiscretePolicy")
 
 class Policy(ABC):
 
@@ -38,23 +37,9 @@ class DiscretePolicy(Policy):
     def __init__(self, action_space):
         if isinstance(action_space, int):
             action_space = gym.spaces.Discrete(action_space)
+        assert isinstance(action_space, gym.spaces.Discrete)
         super(DiscretePolicy, self).__init__(action_space)
-
-    def onehot(self, *args, **kwargs):
-        action = self(*args, **kwargs) # call self
     
-    @property
-    def dtype(self):
-        return self.action_space.dtype
-
-    @property
-    def actions(self):
-        return list(range(action_space.n))
-    
-    @property
-    def shape(self):
-        return tuple() # typically returns a scalar value
-
 class ContinuousPolicy(Policy): # TODO
 
     def __init__(self, action_space):
