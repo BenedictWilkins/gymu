@@ -67,7 +67,7 @@ class _GymuShorthands:
             for z,t in zip(x, tensors):                                          
                 t.append(z)                             
         tensors = [torch.cat(z,dim=0) for z in tensors]  # TODO this uses double memory... perhaps we need to specify a max size?                                                     
-        return TensorDataset(*tensors)      
+        return TensorDataset(*tensors) 
 
 class _WebDatasetIterable(IterableDataset, GymuShorthands, wb.Composable, wb.Shorthands):
    

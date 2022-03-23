@@ -11,13 +11,12 @@ __author__ = "Benedict Wilkins"
 __email__ = "benrjw@gmail.com"
 __status__ = "Development"
 
-from typing import Union
+from typing import Iterable, Union
 import gym
 
 from . import Iterator
 
-__all__ = ("InterceptWrapper", "InterceptIterator")
-
+__all__ = ("InterceptWrapper", "InterceptIterator", "interceptable")
 
 def InterceptWrapper(env, unwrapped=False):
     """ Intercept data from a wrapped environment.
@@ -65,35 +64,71 @@ class _InterceptWrapper(gym.Wrapper):
         data, self.data = self.data, []
         return data
 
-def _find_wrappers(env, cls):
-    envs = [env]
-    while not isinstance(env, cls):
-        #print(env, cls)
-        if hasattr(env, "env"):
-            env = env.env # unwrap
-        elif hasattr(env, "envs"):
-            assert len(env.envs) == 1 # TODO doesnt support multi environments...
-            env = env.envs[0] # unwrap
-        else:
-            raise ValueError(f"Failed to find '{cls}' in wrapper hierarchy.")
-        envs.append(env)
-    return envs
+def interceptable(env):
+    """ Checks if an environment is wrapped with the InterceptWrapper at some point in its wrapper hierarchy.
 
-class InterceptIterator(Iterator):
+    Args:
+        env (Union[gym.Env, gym.Wrapper]): gym environment to test.
 
-    def __init__(self, env, *args, **kwargs):
-        super().__init__(env, *args, **kwargs)
+    Returns:
+        bool: True if an InterceptWrapper was found, False otherwise.
+    """
+    try:
+        _find_wrappers(env, _InterceptWrapper)
+        return True
+    except:
+        return False
+
+class InterceptIterator(Iterable):
+
+    def __init__(self, env, *args, intercept_only=True, **kwargs):
+        super().__init__()
+        self._iterator = Iterator(env, *args, **kwargs)
+
         self._intercept_env = _find_wrappers(env, _InterceptWrapper)[-1]
+        self._intercept_only = intercept_only
         self.state = None
+       
+    @property
+    def mode(self):
+        return self._iterator.mode
     
-    def __iter__(self):
-        iter = super().__iter__()
-        x = next(iter)
-        yield x, [y for y in self._intercept_initial(self._intercept_env.intercept())]
+    @property
+    def env(self):
+        return self._intercept_env 
+    
+    @property
+    def env_wrapped(self):
+        return self._iterator.env
 
-        for x in iter:
-            yield x, [y for y in self._intercept(self._intercept_env.intercept())]
+    @property
+    def policy(self):
+        return self._iterator.policy
+
+    @property
+    def max_length(self):
+        return self._iterator.max_length
+
+    def __iter__(self):
+        if self._intercept_only:
+            return self._intercept_only_iter()
+        else:
+            return self._iter()
             
+    def _intercept_only_iter(self):
+        _iterator = iter(self._iterator)
+        x = next(_iterator)
+        yield from self._intercept_initial(self._intercept_env.intercept())
+        for x in _iterator:
+            yield from self._intercept(self._intercept_env.intercept())
+
+    def _iter(self):
+        _iterator = iter(self._iterator)
+        x = next(_iterator)
+        yield x, [y for y in self._intercept_initial(self._intercept_env.intercept())]
+        for x in _iterator:
+            yield x, [y for y in self._intercept(self._intercept_env.intercept())]
+    
     def _intercept_initial(self, interception):
         self.state, *_ = interception[0]
         yield from self._intercept(interception[1:])
@@ -106,3 +141,19 @@ class InterceptIterator(Iterator):
             self.state = next_state
             if done:
                 break # sometimes a reset is called during step by a wrapper, this can mess things up a bit... dont do this in your wrappers!
+
+def _find_wrappers(env, cls): # find all wrappers up until type 'cls'
+    envs = [env]
+    while not isinstance(env, cls):
+        #print(env, cls)
+        if hasattr(env, "env"):
+            env = env.env # unwrap
+        elif hasattr(env, "envs"):  # TODO doesnt properly support vec environments... this is from stable_baselines3... i wish they followed the gym api...
+            assert len(env.envs) == 1 
+            env = env.envs[0] # unwrap
+        elif hasattr(env, "venv"):  # TODO doesnt properly support vec environments... this is from stable_baselines3... i wish they followed the gym api...
+            env = env.venv # unwrap
+        else:
+            raise ValueError(f"Failed to unwrap '{env}' in wrapper hierarchy.")
+        envs.append(env)
+    return envs

@@ -59,7 +59,7 @@ class _mode(tuple):
         if isinstance(i, int):
             return super().__getitem__(i)
         elif isinstance(i, str):
-            return dict(self.items())[i] # TODOa bit slow...
+            return dict(self.items())[i] # TODO a bit slow...
 
     def __str__(self):
         return "mode-{0}".format(self.__class__.__name__)
@@ -76,6 +76,8 @@ class _mode(tuple):
     @classmethod
     def keys(cls):
         return tuple([MODE_PROPERTIES_DEFAULT[i] for i in cls.__index__])
+
+    
 
 def mode(m):
     return _cast_from(m)

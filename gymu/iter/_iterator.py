@@ -23,13 +23,12 @@ from ..policy import Uniform as uniform_policy
 
 __all__ = ("iterator", "Iterator", "stream", "episode", "episodes")
 
-class iterator(Iterable):
+class Iterator(Iterable):
 
     def __init__(self, env : Union[str, gym.Env, gym.Wrapper], 
                         policy : Callable = None, 
                         mode : Union[List[str], str] = m.s, 
-                        max_length : int = sys.maxsize, 
-                        reset_return_multiple : bool = False):
+                        max_length : int = sys.maxsize):
       
         if isinstance(env, str):
             env = gym.make(env)
@@ -44,25 +43,26 @@ class iterator(Iterable):
 
     def __iter__(self):
         #import times
-        state = self.env.reset()
+        state, info = self.env.reset()
         done = False
         i = 0
         while not done:
-            #time.sleep(0.1)
             action = self.policy(state)
             # state, action, reward, next_state, done, info
-            next_state, reward, done, info = self.env.step(action)
+            next_state, reward, done, next_info = self.env.step(action)
             i += 1
             done = done or i >= self.max_length
-            result = (state, action, reward, next_state, done, info) # S_t, A_t, R_{t+1}, S_{t+1}, done_{t+1}, info_{t+1}
+            if done:
+                assert not 'terminal_state' in info
+                assert not 'terminal_info' in info
+                info['terminal_state'] = next_state
+                info['terminal_info'] = next_info
+            result = (state, action, reward, next_state, done, info) # S_t, A_t, R_{t+1}, S_{t+1}, done_{t+1}, info_t
             yield self.mode(*[result[i] for i in self.mode.__index__])
             state = next_state
+            info = next_info
 
-Iterator = iterator
-
-class InterceptIterator(iterator):
-    pass 
-
+iterator = Iterator # backwards compatibility...
 
 def stream(env, policy=None, mode=m.s, max_episode_length=-1):
     """ Stream the environment, resetting whenever needed (or according to max_episode_length).
@@ -77,8 +77,7 @@ def stream(env, policy=None, mode=m.s, max_episode_length=-1):
     while True:
         for x in iter:
             yield x
-
-
+            
 def episode(env, policy=None, mode=m.s, max_length=10000):
     """ 
         Creates an episode from the given environment and policy.

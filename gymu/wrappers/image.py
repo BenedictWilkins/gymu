@@ -1,68 +1,86 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+""" 
+   Created on 22-03-2022
 """
- Created on 17-02-2021 16:11:54
-
- [Description]
-"""
-__author__ ="Benedict Wilkins"
+__author__ = "Benedict Wilkins"
 __email__ = "benrjw@gmail.com"
-__status__ ="Development"
+__status__ = "Development"
 
+import gym
 import numpy as np
-import skimage.transform
 
-from .np_wrap import NumpyWrapper, _wrap
-from ..spaces import NumpyBox
+__all__ = ("Float", "Integer", "HWC", "CHW")
 
-class image(NumpyWrapper):
+class Float(gym.ObservationWrapper):
 
     def __init__(self, env):
-        super(image, self).__init__(env)
-        self._wrap_type = self.__class__.__name__.capitalize()
-
-    @_wrap
-    def grey(self, components=(0.299, 0.587, 0.114)):
-        wrap = image(self)
-
-        try:
-            ci = wrap.observation_space.shape.index(3) # find channel index
-        except:
-            raise ValueError("States must be (3-channel) coloured images, incorrect state shape: {0}".format(self.observation_space.shape))
+        super().__init__(env)
+        assert isinstance(env.observation_space, gym.spaces.Box)
+        assert issubclass(env.observation_space.dtype.type, np.integer)
+        self._low = env.observation_space.low.ravel()[0]
+        self._high = env.observation_space.high.ravel()[0]
+        assert np.all(env.observation_space.low.ravel() == self._low)
+        assert np.all(env.observation_space.high.ravel() == self._high)
+        self.observation_space = gym.spaces.Box(low=0., high=1., dtype=np.float32, shape=env.observation_space.shape)
         
-        components = np.array(components, dtype=np.float32)
-        shape = [1] * len(wrap.observation_space.shape)
-        shape[ci] = components.shape[0]
-        components = components.reshape(shape)
+    def observation(self, x):
+        x = x.astype(np.float32)
+        x -= self._low
+        x /= (self._high - self._low)
+        return x
 
-        dtype = wrap.observation_space.dtype
+class Integer(gym.ObservationWrapper):
 
-        wrap._transform = lambda x: (x * components).sum(axis=ci, keepdims=True)
-        wrap.observation_space = wrap._transform(wrap.observation_space)
+    def __init__(self, env):
+        super().__init__(env)
+        assert isinstance(env.observation_space, gym.spaces.Box)
+        assert issubclass(env.observation_space.dtype.type, np.floating)
+        self._low = env.observation_space.low.ravel()[0]
+        self._high = env.observation_space.high.ravel()[0]
+        assert np.all(env.observation_space.low.ravel() == self._low)
+        assert np.all(env.observation_space.high.ravel() == self._high)
+        self.observation_space = gym.spaces.Box(low=0, high=255, dtype=np.uint8, shape=env.observation_space.shape)
         
-        return wrap
+    def observation(self, x):
+        x -= self._low
+        x /= (self._high - self._low)
+        x *= 255.
+        return x.astype(np.uint8)
 
-    @_wrap
-    def CHW(self): # assumes HWC format
-        wrap = self.transpose((2,0,1))
-        wrap.__class__ = image # hackz
-        return wrap 
+class CHW(gym.ObservationWrapper):
 
-
-    @_wrap
-    def HWC(self): # assumes CHW format
-        wrap = self.transpose((1,2,0))
-        wrap.__class__ = image # hackz
-        return wrap 
-
-    @_wrap
-    def resize(self, *shape, interpolation=0):
+    def __init__(self, env):
+        super().__init__(env)
+        assert len(env.observation_space.shape) == 3
+        _shape = self.observation(env.observation_space.low).shape
+        _low = env.observation_space.low.ravel()[0]
+        _high = env.observation_space.high.ravel()[0]
+        _dtype = env.observation_space.dtype
+        assert np.all(env.observation_space.low.ravel() == _low)
+        assert np.all(env.observation_space.high.ravel() == _high)
+        self.observation_space = gym.spaces.Box(low=_low, high=_high, shape=_shape, dtype=_dtype)
         
-        wrap = image(self)
-        wrap._transform = lambda x: skimage.transform.resize(x, shape, order=interpolation, preserve_range=True)
+    def observation(self, x):
+        return x.transpose((2,0,1))
 
-        low = skimage.transform.resize(wrap.observation_space.low, shape, order=interpolation,  preserve_range=True).astype(np.float32)
-        high = skimage.transform.resize(wrap.observation_space.high, shape, order=interpolation,  preserve_range=True).astype(np.float32)
+class HWC(gym.ObservationWrapper):
 
-        wrap.observation_space = NumpyBox(low, high)
-        return wrap
+    def __init__(self, env):
+        super().__init__(env)
+        assert len(env.observation_space.shape) == 3
+        _shape = self.observation(env.observation_space.low).shape
+        _low = env.observation_space.low.ravel()[0]
+        _high = env.observation_space.high.ravel()[0]
+        _dtype = env.observation_space.dtype
+        assert np.all(env.observation_space.low.ravel() == _low)
+        assert np.all(env.observation_space.high.ravel() == _high)
+        self.observation_space = gym.spaces.Box(low=_low, high=_high, shape=_shape, dtype=_dtype)
+        
+    def observation(self, x):
+        return x.transpose((1,2,0))
+
+
+
+
+
