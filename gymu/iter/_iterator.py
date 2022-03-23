@@ -23,6 +23,8 @@ from ..policy import Uniform as uniform_policy
 
 __all__ = ("iterator", "Iterator", "stream", "episode", "episodes")
 
+__RESET_COMPAT_ERROR_MSG = "You are using the old gym API `state = env.reset()` please use the new one `state, info = env.reset()` or wrap your environment with a `gymu.wrappers.InfoResetWrapper` to ensure compatability."
+
 class Iterator(Iterable):
 
     def __init__(self, env : Union[str, gym.Env, gym.Wrapper], 
@@ -42,8 +44,14 @@ class Iterator(Iterable):
         self.mode = m.mode(mode) # cast to correct type if not already a mode type
 
     def __iter__(self):
-        #import times
-        state, info = self.env.reset()
+        stateinfo = self.env.reset()
+        try:
+            if not len(stateinfo) != 2:
+                raise ValueError(__RESET_COMPAT_ERROR_MSG)
+        except TypeError: # len was not found...
+            raise ValueError(__RESET_COMPAT_ERROR_MSG)
+        state, info = stateinfo
+
         done = False
         i = 0
         while not done:

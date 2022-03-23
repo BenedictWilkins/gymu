@@ -9,6 +9,8 @@ __status__ = "Development"
 
 import gym
 
+__all__ = ("InfoResetWrapper",)
+
 class InfoResetWrapper(gym.Wrapper):
     """ 
         In older versions of gym the `env.reset` function does not return info. This wrapper will return an empty info dict on reset. 
