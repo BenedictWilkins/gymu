@@ -7,12 +7,18 @@ __author__ = "Benedict Wilkins"
 __email__ = "benrjw@gmail.com"
 __status__ = "Development"
 
+from typing import Dict, Any, List, Iterable, Union
 import numpy as np
 import io
 import itertools
 import more_itertools
+from copy import deepcopy
+from collections import defaultdict
 
 from ...mode import STATE, NEXT_STATE, ACTION, REWARD, DONE, INFO
+
+class _default: pass 
+_DEFAULT = _default()
 
 def decode(source, keep_meta=False):
     def _decode_keep_meta(source):
@@ -29,7 +35,8 @@ def decode(source, keep_meta=False):
     else:
         yield from _decode(source)
 
-def mode(source, mode, ignore_last=True): 
+def mode(source : Iterable, mode , ignore_last : bool = True):
+
     def _mode_without_next_state(source):
         for x in source:
             x = {k:v for k,v in x.items() if k in mode.keys()}
@@ -52,22 +59,115 @@ def mode(source, mode, ignore_last=True):
     else:
         yield from _mode_without_next_state(source)
 
-def keep(source, keys=[STATE, NEXT_STATE, ACTION, REWARD, DONE, INFO]): # keep only these keys
+def keep(source : Iterable, keys : List[Any]):
+    """ Keep the specified keys, discard the rest.
+    Args:
+        source (Iterable): source iterable.
+        keys (List[Any], optional): keys to keep.
+    Yields:
+        dict: dictionary containing only the specified keys and their associated values.
+    """
     for x in source:
         yield {k:x[k] for k in keys}
 
-def window(source, window_size=2):
-    def consume(iterator, n):
-        next(itertools.islice(iterator, n, n), None)
-    iterator = more_itertools.windowed(source, window_size)
-    for x in iterator:
-        k = x[0].keys()
-        done = x[-1].get(DONE, False) # TODO if done isnt present... give a warning? we might overlap into other episodes!
-        x = [z.values() for z in x]
-        yield dict(zip(k, [np.stack(z) for z in zip(*x)]))
-        if done: # skip the last examples and start again at the next episode.
-            consume(iterator, window_size-1)
- 
-def unpack_info(source, keys=None):
-    # TODO info may contain collections of data, to work with other Composables it should be unpackaged into the data dictionary
-    raise NotImplementedError()
+def discard(source : Iterable, keys : List[Any]):
+    """ Discard the specified keys, keep the rest.
+    Args:
+        source (Iterable): source iterable.
+        keys (List[Any], optional): keys to discard.
+    Yields:
+        dict: dictionary containing only keys not specified in 'keys' and their associated values.
+    """
+    for x in source:
+        yield {x:v for k,v in x.items() if k not in keys}
+
+def mask(source : Iterable, mask : Dict[Any,Union[slice,np.ndarray]]={}):
+    mask_map = defaultdict(lambda : (lambda x: x))
+    # is fancy indexing being used? if so, convert element to numpy array.
+    mask_map.update({k:(lambda x, m=mask[k]: np.array(x)[m] if isinstance(m, np.ndarray) else x[m]) for k in mask.keys()})
+    for x in source:
+        yield {k:mask_map[k](z) for k,z in x.items()}
+
+def numpy(source : Iterable):
+    for x in source:
+        yield {k:np.array(v) for k,v in x.items()}
+
+#def torch(source : Iterable, device='cpu'):
+#    for 
+
+def window(source : Iterable, window_size : int = 2, default : Any = 'none'):
+    """ Create a window over data in the iterable, uses `more_itertools.windowed` under the hood. 
+        The resulting windows are not stacked together, this should be done in the next processing step. 
+    
+    Example: 
+        dataset = dataset.decode().window(window_size=4)    # window dataset
+        dataset = dataset.mask(state = slice(2))            # keep only the first two states
+        dataset = datset.numpy()                            # stack
+
+    Example: 
+        dataset = dataset.decode().keep('state')
+        >> [1,2,3,4,5,...]
+        dataset.window(window_size=2)
+        >> [[1,2],[2,3],[3,4],...]
+        dataset.window(window_size=2, default={'state' : -1})
+        >> [[-1,1],[1,2],[2,3],...]
+        dataset.window(window_size=2, default='zeros')
+        >> [[0,1],[1,2],[2,3],...]
+        dataset.window(window_size=2, default='repeat_initial')
+        >> [[1,1],[1,2],[2,3],...]
+        dataset.window(window_size=2, step=2)
+        >> [[0,1],[2,3],[4,5],...]
+        
+    Args:
+        source (Iterable): source iterable.
+        window_size (int, optional): size of the window. Defaults to 2.
+        default (Union[str, dict], optional): default (left) value to pad, should follow the same format elements in the iterable. Options: ['none', 'repeat_initial', 'zeros_like', <dict>]. Defaults to 'none' (no left padding).
+    """
+    if default == 'none':
+        default_l = None
+    elif default == 'repeat_initial':
+        default_l = lambda x : x
+    elif default == 'zeros_like':
+        default_l = lambda x : {k:np.zeros_like(v) for k,v in x.items()}
+    #elif default == 'gaussian_noise': 
+    #    default_l = lambda x: {k:np.random.normal(size=np.array(v).shape) for k,v in x.items()}
+    elif isinstance(default, dict):
+        default_l = lambda x, d=default: d 
+    else:
+        raise ValueError(f"Invalid default value {default} specified, must be {str} or {dict}")
+
+    def windowed(iterable, default): # construct windowed
+        for ep in episode(iterable):
+            if default is not None:
+                first = next(ep)
+                d = default(first)
+                ep = itertools.chain([deepcopy(x) for x in ([d] * (window_size - 1))], [first], ep)
+            
+            yield from more_itertools.windowed(ep, window_size)
+    for x in windowed(source,default_l):
+        yield dict(zip(x[0].keys(), zip(*[z.values() for z in x]))) # group values by keys
+        
+def unpack_info(source : Iterable ):
+    for x in source:
+        info = x['info'] 
+        del x['info'] 
+        x.update(**info)
+        yield x
+
+# utility functions
+
+def episode(iterable):
+    def whilenotdone(x, iterable):
+        try: 
+            yield x
+            while not x.get(DONE, False):
+                x = next(iterable)
+                yield x
+        except StopIteration:
+            return
+    try:
+        while True:
+            x = next(iterable) # stop iteration? (last done reached)
+            yield whilenotdone(x, iterable)
+    except StopIteration as e:
+        return 

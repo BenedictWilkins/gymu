@@ -23,11 +23,11 @@ from ..policy import Uniform as uniform_policy
 
 __all__ = ("iterator", "Iterator", "stream", "episode", "episodes")
 
-__RESET_COMPAT_ERROR_MSG = "You are using the old gym API `state = env.reset()` please use the new one `state, info = env.reset()` or wrap your environment with a `gymu.wrappers.InfoResetWrapper` to ensure compatability."
+_RESET_COMPAT_ERROR_MSG = "You are using the old gym API `state = env.reset()` please use the new one `state, info = env.reset()` or wrap your environment with a `gymu.wrappers.InfoResetWrapper` to ensure compatability."
 
 class Iterator(Iterable):
 
-    def __init__(self, env : Union[str, gym.Env, gym.Wrapper], 
+    def __init__(self, env : Union[str, Callable, gym.Env, gym.Wrapper], 
                         policy : Callable = None, 
                         mode : Union[List[str], str] = m.s, 
                         max_length : int = sys.maxsize):
@@ -35,7 +35,7 @@ class Iterator(Iterable):
         if isinstance(env, str):
             env = gym.make(env)
         elif not isinstance(env, gym.Env) and callable(env):
-            env = env() # create a new environment, useful for parallelism (to avoid copy issues)
+            env = env()
         self.max_length = max_length
         self.env = env
         if policy is None:
@@ -46,10 +46,10 @@ class Iterator(Iterable):
     def __iter__(self):
         stateinfo = self.env.reset()
         try:
-            if not len(stateinfo) != 2:
-                raise ValueError(__RESET_COMPAT_ERROR_MSG)
+            if len(stateinfo) != 2:
+                raise ValueError(_RESET_COMPAT_ERROR_MSG)
         except TypeError: # len was not found...
-            raise ValueError(__RESET_COMPAT_ERROR_MSG)
+            raise ValueError(_RESET_COMPAT_ERROR_MSG)
         state, info = stateinfo
 
         done = False

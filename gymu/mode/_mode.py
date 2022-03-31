@@ -38,17 +38,24 @@ MODE_PROPERTIES_ALIAS = ('s', 'a', 'r', 's', 'd', 'i')
 class _mode(tuple):
 
     def __new__(cls, *data, **kwdata):
+        #global MODE_PROPERTIES, MODE_PROPERTIES_DEFAULT
         if len(data) > 0 and len(kwdata) > 0:
             raise ValueError("Mode arguments cannot be combined, specify either data or kwdata.")
         
+        if len(data) == 1 and len(data[0]) == len(cls.__index__): # didnt unpack, this can happen in copy.deepcopy...
+            if isinstance(next(iter(data[0])), str): 
+                kwdata = data[0]
+            else:
+                data = data[0]
+
         if len(kwdata) > 0: # construct from dictionary
             keys = tuple([MODE_PROPERTIES_DEFAULT[i] for i in cls.__index__])
             if len(keys) != len(kwdata.keys()):
                 raise ValueError(f"Invalid keys {list(kwdata.keys())} specified for mode {cls}, must match {list(keys)}.")
             data = [x[1] for x in sorted(kwdata.items(), key = lambda x: MODE_PROPERTIES[x[0]])]
 
-        if len(data) != len(cls.__index__):
-            keys = tuple([MODE_PROPERTIES[i] for i in cls.__index__])
+        if len(data) != len(cls.__index__): # something went wrong...
+            keys = tuple([MODE_PROPERTIES_DEFAULT[i] for i in cls.__index__])
             if len(data) > 0 and isinstance(data[0], (list, tuple, dict)): 
                 raise ValueError(f"Invalid argument type {type(data[0])} did you forget to unpack with * or ** ?")
             raise ValueError(f"Requires {len(cls.__index__)} arguments to match {keys}, only {len(data)} were supplied.")
@@ -60,12 +67,20 @@ class _mode(tuple):
             return super().__getitem__(i)
         elif isinstance(i, str):
             return dict(self.items())[i] # TODO a bit slow...
+        else:
+            raise IndexError(f"Invalid index type `{type(i)}` should be int or str.")
 
     def __str__(self):
         return "mode-{0}".format(self.__class__.__name__)
 
     def __repr__(self):
         return str(self)
+
+    def get(self, i, default=None):
+        try:
+            return self[i] 
+        except:
+            return default
 
     def items(self):
         return zip(self.keys(), self.values())

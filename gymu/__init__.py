@@ -11,6 +11,10 @@ __status__ = "Development"
 
 import gym
 
+import logging
+Logger = logging.getLogger("gymu")
+Logger.setLevel(logging.INFO) 
+
 from . import iter
 from . import mode
 from . import policy
@@ -18,11 +22,11 @@ from . import spaces
 from . import wrappers
 from . import utils
 from . import data
+from . import typing
 
 from .iter import episode, episodes, iterator, intercept
 
-__all__ = ('iter', 'iterator', 'mode', 'policy', 'spaces', 'wrappers', 'utils', 'data', 'intercept')
-
+__all__ = ('iter', 'iterator', 'mode', 'policy', 'spaces', 'wrappers', 'utils', 'data', 'intercept', 'typing')
 
 
 def make(env_id, **kwargs):
