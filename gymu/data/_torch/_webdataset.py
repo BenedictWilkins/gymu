@@ -122,7 +122,7 @@ class _WebDatasetEnvironmentIterable(Processor):
     def __iter__(self):
         # the process is the same for each worker if using multiprocess
         env = self.env()
-        policy = self.policy() # TODO if this should be shared accross workers things are more complicated
+        policy = self.policy() if self.policy is not None else None # TODO if this should be shared accross workers things are more complicated
         iterator = Iterator(env, policy, max_length=self._max_episode_length, mode=self._mode)
         worker_info = torch.utils.data.get_worker_info()
         if worker_info is None:  # single-process data loading, return the full iterator

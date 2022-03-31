@@ -9,7 +9,7 @@ __author__ ="Benedict Wilkins"
 __email__ = "benrjw@gmail.com"
 __status__ ="Development"
 
-from . import _serialise
+from ._serialise import *
 
 class overload:
     """
@@ -40,7 +40,7 @@ class overload:
 
     def __call__(self, *args, **kwargs):
         for k,f in self.cases:
-            if all([issubclass(type(x), k) for x in args]):
+            if all([(issubclass(type(x), k) or x is None) for x in args]):
                 return f(*args, **kwargs)
-        return function(*args, **kwargs)
+        raise AttributeError(f"Function with args signature {[type(x) for x in args]} not found.")
 
