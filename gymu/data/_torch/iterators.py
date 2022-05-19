@@ -68,7 +68,9 @@ def keep(source : Iterable, keys : List[Any]):
         dict: dictionary containing only the specified keys and their associated values.
     """
     for x in source:
-        yield {k:x[k] for k in keys}
+        yield {k:x[k] for k in keys} # TODO missing error handling?
+
+
 
 def discard(source : Iterable, keys : List[Any]):
     """ Discard the specified keys, keep the rest.
@@ -79,7 +81,7 @@ def discard(source : Iterable, keys : List[Any]):
         dict: dictionary containing only keys not specified in 'keys' and their associated values.
     """
     for x in source:
-        yield {x:v for k,v in x.items() if k not in keys}
+        yield {k:v for k,v in x.items() if k not in keys}
 
 def mask(source : Iterable, mask : Dict[Any,Union[slice,np.ndarray]]={}):
     mask_map = defaultdict(lambda : (lambda x: x))
@@ -132,7 +134,12 @@ def window(source : Iterable, window_size : int = 2, default : Any = 'none'):
     #elif default == 'gaussian_noise': 
     #    default_l = lambda x: {k:np.random.normal(size=np.array(v).shape) for k,v in x.items()}
     elif isinstance(default, dict):
-        default_l = lambda x, d=default: d 
+        def _make_callable(v):
+            return (lambda *_: v) if not callable(v) else v
+        default = {k:_make_callable(v) for k,v in default}
+        default_l = lambda x, d=default: {k:d.get(k, (lambda *_:None))(k,v) for k,v in x.items()}
+    elif callable(default):
+        default_l = lambda x, d=default: d(x)
     else:
         raise ValueError(f"Invalid default value {default} specified, must be {str} or {dict}")
 
@@ -147,11 +154,14 @@ def window(source : Iterable, window_size : int = 2, default : Any = 'none'):
     for x in windowed(source,default_l):
         yield dict(zip(x[0].keys(), zip(*[z.values() for z in x]))) # group values by keys
         
-def unpack_info(source : Iterable ):
+def unpack_info(source : Iterable, *keys : List[str]):
     for x in source:
         info = x['info'] 
+        if len(keys) > 0:
+            x = dict(**x, **{k:info[k] for k in keys})
+        else:
+            x = dict(**x, **info)
         del x['info'] 
-        x.update(**info)
         yield x
 
 # utility functions

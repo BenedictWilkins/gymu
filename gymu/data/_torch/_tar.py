@@ -24,7 +24,7 @@ from ...mode import STATE, NEXT_STATE, ACTION, REWARD, DONE, INFO
 
 __all__ = ("write_episode",)
 
-def write_episode(iterator, path="./episode/"):
+def write_episode(iterator, path="./episode/", compression="gz"):
     """
         Write iterator data to a tar archive. May be used with the standard gymu iterator to create a dataset on disk. 
 
@@ -35,10 +35,15 @@ def write_episode(iterator, path="./episode/"):
             gymu.data.write_episode(iterator)
         '''
     """
-    path = pathlib.Path(path).resolve()
+    if compression is None:
+        ext, write = '.tar', 'w'
+    else:
+        ext, write = f".tar.{compression}", f"w:{compression}"
+
+    path = pathlib.Path(path).expanduser().resolve()
     path.mkdir(parents=True, exist_ok=False)
-    path_tar = pathlib.Path(path, f"../{path.stem}.tar.gz").resolve()
-    with tarfile.open(str(path_tar), "w:gz") as tar:
+    path_tar = pathlib.Path(path, f"../{path.stem}{ext}").resolve()
+    with tarfile.open(str(path_tar), write) as tar:
         for i, x in enumerate(tqdm(iterator)):
             file = pathlib.Path(path, str(i).zfill(8) + ".npz")
             for k, v in dict(x).items():        

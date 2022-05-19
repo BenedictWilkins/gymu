@@ -17,7 +17,6 @@ import ray
 from tqdm.auto import tqdm
 
 from typing import Union, Callable, List, Dict
-
 from .. import mode as m
 from ..policy import Uniform as uniform_policy
 
@@ -45,13 +44,14 @@ class Iterator(Iterable):
 
     def __iter__(self):
         stateinfo = self.env.reset()
-        try:
-            if len(stateinfo) != 2:
+        try: # validate API...
+            if len(stateinfo) != 2: 
                 raise ValueError(_RESET_COMPAT_ERROR_MSG)
-        except TypeError: # len was not found...
+            #elif not self.env.observation_space.contains(stateinfo[0]):
+            #    raise ValueError(_RESET_COMPAT_ERROR_MSG)
+        except TypeError: 
             raise ValueError(_RESET_COMPAT_ERROR_MSG)
         state, info = stateinfo
-
         done = False
         i = 0
         while not done:

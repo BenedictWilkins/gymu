@@ -65,8 +65,8 @@ class GymuShorthands:
     def window(self, window_size=2, **kwargs):
         return self.then(iterators.window, window_size=window_size, **kwargs)
 
-    def unpack_info(self):
-        return self.then(iterators.unpack_info)
+    def unpack_info(self, *keys : List[str]):
+        return self.then(iterators.unpack_info, *keys)
     
     def numpy(self):
         return self.then(iterators.numpy)
