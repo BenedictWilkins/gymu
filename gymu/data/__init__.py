@@ -11,12 +11,19 @@ __status__ = "Development"
 
 from ._data import *
 
+try:
+    from . import config
+except ModuleNotFoundError as e:
+    pass # hydra/omegaconf is not installed
+
 try: 
     from ._lightning import *
 except ModuleNotFoundError as e:
-    pass # pytorch lightning is not installed... thats ok
+    pass # pytorch lightning is not installed
 
 try: 
     from ._torch import *
 except ModuleNotFoundError as e:
-    pass # pytorch is not installed ... thats ok
+    pass # pytorch is not installed
+
+__all__ = ("config", "compose", "iterators")

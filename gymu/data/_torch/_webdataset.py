@@ -14,6 +14,8 @@ import webdataset as wb
 import numpy as np
 import torch
 import math
+import pathlib
+import glob
 
 from tqdm.auto import tqdm
 from torch.utils.data import IterableDataset, TensorDataset, DataLoader
@@ -30,9 +32,9 @@ from ... import mode as m
 
 
 from . import iterators
+from . import compose
 
-
-__all__ = ("dataset",)
+__all__ = ("dataset", "GymuShorthands")
 
 
 """
@@ -74,22 +76,11 @@ class GymuShorthands:
     def mask(self, **mask : Union[slice, np.ndarray]):
         return self.then(iterators.mask, mask)
 
+    def to_dict(self, *keys : List[str]):
+        return self.then(iterators.to_dict, *keys)
+
     def to_tensor_dataset(self, num_workers : int = 0, show_progress : bool = False, order : List[str] = None): # WARNING YOU MIGHT RUN OUT OF MEMORY ;)
-        import torch.multiprocessing
-        torch.multiprocessing.set_sharing_strategy('file_system')                                  
-        source = DataLoader(self, batch_size=512, shuffle=False, num_workers=num_workers, drop_last=False)   
-        source = source if not show_progress else tqdm(source, desc="Loading Tensor Dataset")                                                                          
-        source = iter(source)
-        tensors = [[x] for x in next(source)]
-        #print([(type(x[0])) for x in tensors])
-        for z in tensors: # validate input... 
-            if not torch.is_tensor(z[0]):
-                raise ValueError(f"Expected torch.Tensor but found {type(z[0])}, choose a gymu.mode or convert to tuple before converting to a TensorDataset for example: 'dataset.decode().mode(gymu.sa).to_tensor_dataset()'.")
-        for x in source:
-            for z,t in zip(x, tensors):
-                t.append(z)
-        tensors = [torch.cat(z,dim=0) for z in tensors]  # TODO this uses double memory... perhaps we need to specify a max size?                                                     
-        return TensorDataset(*tensors) 
+        return compose.to_tensor_dataset(self, num_workers=num_workers, show_progress=show_progress, order=order)
 
 class Composable(wb.Composable):
 
@@ -98,6 +89,12 @@ class Composable(wb.Composable):
         assert callable(f)
         assert "source" not in kw
         return Processor(self, f, *args, **kw)
+
+    def compose(self, *funs):
+        dataset = self
+        for fun in funs:
+            dataset = fun(dataset)
+        return dataset
 
 class Processor(GymuShorthands, Composable, wb.Processor):
     pass
@@ -135,24 +132,27 @@ class _WebDatasetEnvironmentIterable(Processor):
                 n -= 1
             for _ in range(n):
                 yield from iterator
-                
-@overload
-def dataset(*args, **kwargs):
-    pass 
 
-@dataset.args(List)
-def dataset(path: List, **kwargs):
+def get_urls(path, recursive=True, extension=".tar*"):
+    path = str(pathlib.Path(path).expanduser().resolve())
+    path += ("*" * (int(recursive) + 1)) + extension
+    return [url for url in glob.glob(path, recursive=recursive)]
+
+from plum import dispatch
+
+@dispatch
+def dataset(path: List[str], transforms=[], **kwargs):
     path = [str(p) for p in path]
-    return _WebDatasetIterable(wb.WebDataset(path, **kwargs))
+    return _WebDatasetIterable(wb.WebDataset(path, **kwargs)).compose(*transforms)
 
-@dataset.args(str)
-def dataset(path : str, **kwargs):
-    return _WebDatasetIterable(wb.WebDataset(path, **kwargs))
+@dispatch
+def dataset(path : str, transforms=[],**kwargs):
+    return _WebDatasetIterable(wb.WebDataset(path, **kwargs)).compose(*transforms)
 
-@dataset.args(Iterable)
-def dataset(iterator : Iterable, **kwargs):
-    return _WebDatasetIterable(iterator, **kwargs).map(lambda x: dict(**x))
+@dispatch
+def dataset(iterator : Iterable, transforms=[], **kwargs):
+    return _WebDatasetIterable(iterator, **kwargs).map(lambda x: dict(**x)).compose(*transforms)
 
-@dataset.args(Callable, Callable)
-def dataset(env : Callable, policy : Callable, mode : Mode = m.sa, max_episode_length : int = 4096, num_episodes : int = 1):
-    return _WebDatasetEnvironmentIterable(env, policy, mode=mode, max_episode_length=max_episode_length, num_episodes=num_episodes )
+@dispatch
+def dataset(env : Callable, policy : Union[Callable,None] = None, mode = m.sa, max_episode_length : int = 4096, num_episodes : int = 1, transforms=[]):
+    return _WebDatasetEnvironmentIterable(env, policy, mode=mode, max_episode_length=max_episode_length, num_episodes=num_episodes).compose(*transforms)

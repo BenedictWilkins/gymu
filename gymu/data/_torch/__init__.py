@@ -9,9 +9,12 @@ __status__ = "Development"
 
 from ._torch import *
 from ._tar import *
+from . import compose
+from . import iterators
 
 try:
     from ._webdataset import *
 except ModuleNotFoundError as e:
     print(e)
     pass # webdataset is not installed ... thats ok
+

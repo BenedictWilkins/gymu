@@ -20,6 +20,15 @@ from ...mode import STATE, NEXT_STATE, ACTION, REWARD, DONE, INFO
 class _default: pass 
 _DEFAULT = _default()
 
+
+def to_dict(source, *keys):
+    if len(keys) == 0: # try to convert to dictionary without keys...
+        for data in source:
+            yield dict(**data) 
+    else:
+        for data in source:
+            yield dict(zip(keys,data))
+
 def decode(source, keep_meta=False):
     def _decode_keep_meta(source):
         for data in source:
@@ -70,8 +79,6 @@ def keep(source : Iterable, keys : List[Any]):
     for x in source:
         yield {k:x[k] for k in keys} # TODO missing error handling?
 
-
-
 def discard(source : Iterable, keys : List[Any]):
     """ Discard the specified keys, keep the rest.
     Args:
@@ -93,9 +100,6 @@ def mask(source : Iterable, mask : Dict[Any,Union[slice,np.ndarray]]={}):
 def numpy(source : Iterable):
     for x in source:
         yield {k:np.array(v) for k,v in x.items()}
-
-#def torch(source : Iterable, device='cpu'):
-#    for 
 
 def window(source : Iterable, window_size : int = 2, default : Any = 'none'):
     """ Create a window over data in the iterable, uses `more_itertools.windowed` under the hood. 
