@@ -15,19 +15,9 @@ import more_itertools
 from copy import deepcopy
 from collections import defaultdict
 
-from ...mode import STATE, NEXT_STATE, ACTION, REWARD, DONE, INFO
+from ....mode import STATE, NEXT_STATE, ACTION, REWARD, DONE, INFO
 
-class _default: pass 
-_DEFAULT = _default()
-
-
-def to_dict(source, *keys):
-    if len(keys) == 0: # try to convert to dictionary without keys...
-        for data in source:
-            yield dict(**data) 
-    else:
-        for data in source:
-            yield dict(zip(keys,data))
+__all__ = ("decode", "mode", "keep", "discard", "window", "unpack_info", "numpy", "mask", "to_dict")
 
 def decode(source, keep_meta=False):
     def _decode_keep_meta(source):
@@ -167,6 +157,17 @@ def unpack_info(source : Iterable, *keys : List[str]):
             x = dict(**x, **info)
         del x['info'] 
         yield x
+
+def to_dict(source, *keys):
+    if len(keys) == 0: # try to convert to dictionary without keys...
+        for data in source:
+            yield dict(**data) 
+    else:
+        for data in source:
+            yield dict(zip(keys,data))
+
+
+
 
 # utility functions
 

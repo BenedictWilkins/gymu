@@ -8,19 +8,9 @@ __email__ = "benrjw@gmail.com"
 __status__ = "Development"
 
 import numpy as np
-import torch
 import pathlib
-import itertools
 import tarfile
-import io
-
 from tqdm.auto import tqdm
-from torch.utils.data import IterableDataset, TensorDataset
-
-from itertools import groupby
-from more_itertools import pairwise, windowed
-
-from ...mode import STATE, NEXT_STATE, ACTION, REWARD, DONE, INFO
 
 __all__ = ("write_episode",)
 

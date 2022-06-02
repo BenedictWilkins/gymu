@@ -9,21 +9,16 @@ __author__ = "Benedict Wilkins"
 __email__ = "benrjw@gmail.com"
 __status__ = "Development"
 
-from ._data import *
+from ._tar import write_episode
 
 try:
     from . import config
 except ModuleNotFoundError as e:
     pass # hydra/omegaconf is not installed
 
-try: 
-    from ._lightning import *
+try:
+    from .webdataset import *
 except ModuleNotFoundError as e:
-    pass # pytorch lightning is not installed
-
-try: 
-    from ._torch import *
-except ModuleNotFoundError as e:
-    pass # pytorch is not installed
+    pass # webdataset is not installed ?
 
 __all__ = ("config", "compose", "iterators")

@@ -16,6 +16,7 @@ __status__ = "Development"
 from typing import Any, Union, Callable, List, Dict
 
 from omegaconf import DictConfig, ListConfig, OmegaConf
+import yaml
 import gym
 import hydra
 from functools import partial, reduce
@@ -23,7 +24,6 @@ import ast
 from types import SimpleNamespace
 
 __all__ = ("transform", 'environment')
-
 
 def wrapper_resolver(wrapper):
     mod = ast.parse(wrapper.strip())
@@ -86,22 +86,64 @@ def environment_resolver(env, *wrappers):
     
     mod = ast.parse(env.strip())
     # TODO error message if doesnt contain Expr/BinOp
-    binop = mod.body[0].value # (subtract name-id)
-
-    # TODO support environment namespaces "namespace/name-version"
-
-    name = binop.left.id
+    binop = mod.body[0].value
+    #print(ast.dump(binop))
+    if isinstance(binop.left, ast.BinOp):
+        namespace = binop.left.left.id + "/"
+        name = binop.left.right.id
+    else:
+        namespace = ""
+        name = binop.left.id
     if isinstance(binop.right, ast.Name):
         version = binop.right.id
-        args = [f"{name}-{version}"]
+        args = [f"{namespace}{name}-{version}"]
         kwargs = dict()
     else: # function call
         version = binop.right.func.id
-        args = [f"{name}-{version}"] + [n.value for n in binop.right.args]
+        args = [f"{namespace}{name}-{version}"] + [n.value for n in binop.right.args]
         kwargs = {n.arg:n.value.value for n in binop.right.keywords}
     result = DictConfig(dict(_target_ = _fun_qual_name(environment), _args_=args, _wrappers_ = wrappers, **kwargs))
     return result
 
+def spec(environment_factory):
+    factory = hydra.utils.instantiate(environment_factory)
+    get = _EnvironmentConfigGetter(factory)
+    with get:
+        return get()
+
+class _EnvironmentConfigGetter:
+
+    def __init__(self, env_factory):
+        self.env_factory = env_factory
+        self.env = None
+
+    def __call__(self):
+        spec = {k:v for k,v in self.env.spec.__dict__.items()}
+        meta = self.get_environment_meta(self.env)
+        config = dict(
+            action_space=self.env.action_space, 
+            observation_space=self.env.observation_space,
+            spec=spec,
+            meta=meta)
+        # serialize action_space/observation_space etc.
+        yaml_data = yaml.dump(config)
+        yaml_data = _strip_yaml_tags(yaml_data)
+        return OmegaConf.create(yaml_data)
+
+    def __enter__(self):
+        self.env = self.env_factory()
+        self.env.reset() # some environments require this to prevent hanging...
+ 
+    def __exit__(self, *args):
+        if hasattr(self.env, "close"):
+            self.env.close() # some environments should be closed... 
+        self.env = None
+
+    def get_environment_meta(self, env): # some additional environment stuff...
+        meta = dict()
+        if hasattr(env, "get_action_meanings"):
+            meta['action_meanings'] = env.get_action_meanings()
+        return meta
 
 
 OmegaConf.register_new_resolver("get_class", hydra.utils.get_class)
@@ -109,8 +151,7 @@ OmegaConf.register_new_resolver("get_method", hydra.utils.get_method)
 OmegaConf.register_new_resolver("environment", environment_resolver)
 OmegaConf.register_new_resolver("wrapper", wrapper_resolver)
 OmegaConf.register_new_resolver("transform", transform_resolver)
-#OmegaConf.register_new_resolver("wrap", wrap_resolver)
-
+OmegaConf.register_new_resolver("spec", spec, use_cache=True)
 
 class bind(partial):
     """ 
@@ -123,7 +164,7 @@ class bind(partial):
         args = (next(iargs) if arg is ... else arg for arg in self.args)
         return self.func(*args, *iargs, **keywords)
 
-def transform(fun, *args, **kwargs):  # refer to this in your configuration file
+def transform(fun, *args, **kwargs):
     return bind(fun, ..., *args, **kwargs)
 
 def environment(env_id : str, *args : List[Any], _wrappers_ : List[Callable] = [], **kwargs : Dict[str, Any]): # refer to this in your configuration file
@@ -169,7 +210,17 @@ def _ast_expr_resolver(expr):
     elif isinstance(expr.value, ast.Name):
         return SimpleNamespace(name = expr.value.id, args=[], kwargs={})
 
-
+def _strip_yaml_tags(yaml_data): 
+    result = []
+    tab = "  " # check the file and update this to be consistent?
+    for line in yaml_data.splitlines():
+        idx = line.find("!")
+        if idx > -1: # hydrafy
+            result.append(line[:idx])
+            result.append(tab +  f"_target_ : {line[idx:].replace('!', '')}")
+        else:
+            result.append(line)
+    return '\n'.join(result)
 
 
 
