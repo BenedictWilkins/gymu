@@ -13,6 +13,7 @@ __email__ = "benrjw@gmail.com"
 __status__ = "Development"
 
 
+import itertools
 from typing import Any, Union, Callable, List, Dict
 
 from omegaconf import DictConfig, ListConfig, OmegaConf
@@ -23,12 +24,16 @@ from functools import partial, reduce
 import ast
 from types import SimpleNamespace
 
+from ...utils import bind
+
 __all__ = ("transform", 'environment')
+
+from ._ast import ast_resolve
 
 def wrapper_resolver(wrapper):
     mod = ast.parse(wrapper.strip())
     assert len(mod.body) == 1 # too many expressions...
-    result = _ast_expr_resolver(mod.body[0])
+    result = ast_resolve(mod.body[0])
     obj = dict(_target_ = _fun_qual_name(hydra.utils.get_class), _args_ = [result.name])
     return  DictConfig(dict(_target_ = _fun_qual_name(transform), 
                         _args_ = [obj] + result.args, 
@@ -37,7 +42,7 @@ def wrapper_resolver(wrapper):
 def transform_resolver(tran):
     mod = ast.parse(tran.strip())
     assert len(mod.body) == 1 # too many expressions...
-    result = _ast_expr_resolver(mod.body[0])
+    result = ast_resolve(mod.body[0])
     obj = dict(_target_ = _fun_qual_name(hydra.utils.get_method), _args_ = [result.name])
     return  DictConfig(dict(_target_ = _fun_qual_name(transform), 
                         _args_ = [obj] + result.args, 
@@ -153,17 +158,6 @@ OmegaConf.register_new_resolver("wrapper", wrapper_resolver)
 OmegaConf.register_new_resolver("transform", transform_resolver)
 OmegaConf.register_new_resolver("spec", spec, use_cache=True)
 
-class bind(partial):
-    """ 
-        An improved version of functools 'partial' which accepts Ellipsis (...) as a placeholder. 
-        The 'dataset' argument in composition will not be filled in. 
-    """
-    def __call__(self, *args, **keywords):
-        keywords = {**self.keywords, **keywords}
-        iargs = iter(args)
-        args = (next(iargs) if arg is ... else arg for arg in self.args)
-        return self.func(*args, *iargs, **keywords)
-
 def transform(fun, *args, **kwargs):
     return bind(fun, ..., *args, **kwargs)
 
@@ -197,18 +191,7 @@ def environment(env_id : str, *args : List[Any], _wrappers_ : List[Callable] = [
 def _fun_qual_name(x):
     return f"{x.__module__}.{x.__qualname__}"
 
-def _ast_expr_resolver(expr):
-    if isinstance(expr.value, ast.Attribute): # its a fully qualified class/method name
-        name = []
-        for node in ast.walk(expr.value):
-            if isinstance(node, ast.Name):
-                name.append(node.id)
-            elif isinstance(node, ast.Attribute):
-                name.append(node.attr)
-        name = ".".join(reversed(name))
-        return SimpleNamespace(name = name, args=[], kwargs={})
-    elif isinstance(expr.value, ast.Name):
-        return SimpleNamespace(name = expr.value.id, args=[], kwargs={})
+
 
 def _strip_yaml_tags(yaml_data): 
     result = []

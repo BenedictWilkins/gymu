@@ -15,9 +15,9 @@ import more_itertools
 from copy import deepcopy
 from collections import defaultdict
 
-from ....mode import STATE, NEXT_STATE, ACTION, REWARD, DONE, INFO
+from ...mode import STATE, NEXT_STATE, ACTION, REWARD, DONE, INFO
 
-__all__ = ("decode", "mode", "keep", "discard", "window", "unpack_info", "numpy", "mask", "to_dict")
+__all__ = ("decode", "mode", "keep", "discard", "window", "unpack_info", "numpy", "mask", "to_dict", "to_tuple")
 
 def decode(source, keep_meta=False):
     def _decode_keep_meta(source):
@@ -166,6 +166,13 @@ def to_dict(source, *keys):
         for data in source:
             yield dict(zip(keys,data))
 
+def to_tuple(source, *keys):
+    if len(keys) == 0:
+        for data in source:
+            yield tuple(data.values())
+    else:
+        for data in source:
+            yield tuple([data[k] for k in keys])
 
 
 

@@ -7,8 +7,10 @@ __author__ = "Benedict Wilkins"
 __email__ = "benrjw@gmail.com"
 __status__ = "Development"
 
-from . import compose
-from . import iterators
-from ._webdataset import *
+from ._compose import *
+from ._shorthands import *
+try:
+    from ._torch import *
+except ModuleNotFoundError as e:
+    pass # torch is not installed?
 
-__all__ = ("dataset", "compose", "iterators")

@@ -21,9 +21,9 @@ from collections.abc import Iterable
 from typing import List, Union, Dict, Any, Callable
 from plum import dispatch
 
-from ...typing import Mode
-from ...iter import Iterator
-from ... import mode as m
+from ..typing import Mode
+from ..iter import Iterator
+from .. import mode as m
 
 from .compose import Shorthands
 

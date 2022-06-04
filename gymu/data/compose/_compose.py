@@ -45,7 +45,7 @@ def to_dict(dataset, *keys : List[str]):
     return dataset.then(iterators.to_dict, *keys)
 
 def to_tuple(dataset, *keys):
-    return dataset.then(wbiterators.to_tuple, *keys)
+    return dataset.then(iterators.to_tuple, *keys)
 
 
 

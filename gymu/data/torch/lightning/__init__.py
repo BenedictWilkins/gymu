@@ -7,10 +7,4 @@ __author__ = "Benedict Wilkins"
 __email__ = "benrjw@gmail.com"
 __status__ = "Development"
 
-from ._compose import *
-from ._shorthands import *
-
-try: 
-    from ._torch import *
-except:
-    pass # torch is not installed...
+from ._lightning import *

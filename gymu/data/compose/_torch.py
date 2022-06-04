@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from tqdm.auto import tqdm
 import torch.multiprocessing
 
-__all__ = ("to_tensor_dataset")
+__all__ = ("to_tensor_dataset",)
 
 def to_tensor_dataset(dataset, num_workers : int = 0, show_progress : bool = False, lazy = False): # WARNING YOU MIGHT RUN OUT OF MEMORY ;)
     lazy_dataset = LazyTensorDataset(dataset, num_workers=num_workers, show_progress=show_progress)
@@ -23,10 +23,12 @@ def to_tensor_dataset(dataset, num_workers : int = 0, show_progress : bool = Fal
 class LazyTensorDataset(TensorDataset):
     
     def __init__(self, dataset, num_workers : int = 0, show_progress : bool = False):
+        super().__init__()
         self.dataset = dataset
         self.num_workers = num_workers
         self.show_progress = show_progress
         self.__getitem__ = self._getitem_first
+       
     
     def __prepare_data__(self):
         torch.multiprocessing.set_sharing_strategy('file_system')                                  
@@ -50,3 +52,8 @@ class LazyTensorDataset(TensorDataset):
         assert len(self) == 0
         self.prepare_data()
         self.__getitem__ = super().__getitem__
+    
+    def __len__(self):
+        if len(self.tensors) == 0:
+            self.prepare_data()
+        return self.tensors[0].size(0)

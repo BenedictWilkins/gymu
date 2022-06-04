@@ -11,36 +11,14 @@ __status__ ="Development"
 
 from ._serialise import *
 
-class overload:
+from functools import partial 
+
+class bind(partial):
+    """ 
+        An improved version of functools 'partial' which accepts Ellipsis (...) as an 'args' placeholder. 
     """
-        Overload decorator for functions, example:
-        '''
-            @overload
-            def f():
-                pass
-
-            @f.args(int, int)
-            def f(x, y):
-                print('two integers')
-
-            @f.args(float)
-            def f(x):
-                print('one float')
-        '''
-        See https://stackoverflow.com/a/57726675/9704615 for details.
-    """
-    def __init__(self, f):
-        self.cases = []
-
-    def args(self, *args):
-        def store_function(f):
-            self.cases.append((tuple(args), f))
-            return self
-        return store_function
-
-    def __call__(self, *args, **kwargs):
-        for k,f in self.cases:
-            if all([(issubclass(type(x), k) or x is None) for x in args]):
-                return f(*args, **kwargs)
-        raise AttributeError(f"Function with args signature {[type(x) for x in args]} not found.")
-
+    def __call__(self, *args, **keywords):
+        keywords = {**self.keywords, **keywords}
+        iargs = iter(args)
+        args = (next(iargs) if arg is ... else arg for arg in self.args)
+        return self.func(*args, *iargs, **keywords)
