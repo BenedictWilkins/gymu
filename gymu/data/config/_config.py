@@ -49,6 +49,16 @@ def transform_resolver(tran):
                         **result.kwargs)) 
 
 def environment_resolver(env, *wrappers):
+    factory_config = environment_factory(env, *wrappers)
+    factory = hydra.utils.instantiate(factory_config)
+    get = _EnvironmentConfigGetter(factory)
+    with get:
+        result = get()
+        assert not '_factory_' in result # ?? this keyword is reserved...
+        OmegaConf.update(result, '_factory_', factory_config)
+        return result
+
+def environment_factory(env, *wrappers):
     """ Resolve a gym environment.
     Usage in hydra config files:
     ```
@@ -88,11 +98,9 @@ def environment_resolver(env, *wrappers):
         if OmegaConf.is_list(wrappers[0]):
             assert len(wrappers) == 1 # hmm..
             wrappers = wrappers[0]
-    
     mod = ast.parse(env.strip())
     # TODO error message if doesnt contain Expr/BinOp
     binop = mod.body[0].value
-    #print(ast.dump(binop))
     if isinstance(binop.left, ast.BinOp):
         namespace = binop.left.left.id + "/"
         name = binop.left.right.id
@@ -109,12 +117,6 @@ def environment_resolver(env, *wrappers):
         kwargs = {n.arg:n.value.value for n in binop.right.keywords}
     result = DictConfig(dict(_target_ = _fun_qual_name(environment), _args_=args, _wrappers_ = wrappers, **kwargs))
     return result
-
-def spec(environment_factory):
-    factory = hydra.utils.instantiate(environment_factory)
-    get = _EnvironmentConfigGetter(factory)
-    with get:
-        return get()
 
 class _EnvironmentConfigGetter:
 
@@ -153,10 +155,9 @@ class _EnvironmentConfigGetter:
 
 OmegaConf.register_new_resolver("get_class", hydra.utils.get_class)
 OmegaConf.register_new_resolver("get_method", hydra.utils.get_method)
-OmegaConf.register_new_resolver("environment", environment_resolver)
+OmegaConf.register_new_resolver("environment", environment_resolver, use_cache=True)
 OmegaConf.register_new_resolver("wrapper", wrapper_resolver)
 OmegaConf.register_new_resolver("transform", transform_resolver)
-OmegaConf.register_new_resolver("spec", spec, use_cache=True)
 
 def transform(fun, *args, **kwargs):
     return bind(fun, ..., *args, **kwargs)

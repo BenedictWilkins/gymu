@@ -10,8 +10,9 @@ __status__ = "Development"
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm.auto import tqdm
 import torch.multiprocessing
+from ..iterators._iterators import _tuple_or_mapping_each
 
-__all__ = ("to_tensor_dataset",)
+__all__ = ("to_tensor_dataset", "to_tensor")
 
 def to_tensor_dataset(dataset, num_workers : int = 0, show_progress : bool = False, lazy = False): # WARNING YOU MIGHT RUN OUT OF MEMORY ;)
     lazy_dataset = LazyTensorDataset(dataset, num_workers=num_workers, show_progress=show_progress)
@@ -19,6 +20,11 @@ def to_tensor_dataset(dataset, num_workers : int = 0, show_progress : bool = Fal
         return lazy_dataset
     else:
         return lazy_dataset.__prepare_data__()
+
+def to_tensor(dataset):
+    def _to_tensor(x):
+        return torch.from_numpy(x) # TODO add options for list data etc
+    return dataset.then(_tuple_or_mapping_each, fun=_to_tensor)
 
 class LazyTensorDataset(TensorDataset):
     

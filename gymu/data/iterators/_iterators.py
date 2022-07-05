@@ -7,17 +7,26 @@ __author__ = "Benedict Wilkins"
 __email__ = "benrjw@gmail.com"
 __status__ = "Development"
 
-from typing import Dict, Any, List, Iterable, Union
+from typing import Callable, Dict, Any, List, Iterable, Union
 import numpy as np
 import io
 import itertools
 import more_itertools
 from copy import deepcopy
-from collections import defaultdict
+from collections import defaultdict, Mapping
 
 from ...mode import STATE, NEXT_STATE, ACTION, REWARD, DONE, INFO
 
-__all__ = ("decode", "mode", "keep", "discard", "window", "unpack_info", "numpy", "mask", "to_dict", "to_tuple")
+__all__ = ("decode", "mode", "keep", "discard", "window", "unpack_info", "to_numpy", "mask", "to_dict", "to_tuple", "map_each")
+
+def to_numpy(source : Iterable):
+    yield from _tuple_or_mapping_each(source, np.array)
+
+def map_each(source, fun):
+    if callable(fun):
+       yield from _tuple_or_mapping_each(source, fun)
+    else:
+        raise NotImplementedError("TODO implement dictionary of functions?")  
 
 def decode(source, keep_meta=False):
     def _decode_keep_meta(source):
@@ -87,9 +96,7 @@ def mask(source : Iterable, mask : Dict[Any,Union[slice,np.ndarray]]={}):
     for x in source:
         yield {k:mask_map[k](z) for k,z in x.items()}
 
-def numpy(source : Iterable):
-    for x in source:
-        yield {k:np.array(v) for k,v in x.items()}
+
 
 def window(source : Iterable, window_size : int = 2, default : Any = 'none'):
     """ Create a window over data in the iterable, uses `more_itertools.windowed` under the hood. 
@@ -172,6 +179,7 @@ def to_tuple(source, *keys):
             yield tuple(data.values())
     else:
         for data in source:
+            #print([x.shape for x in data.values()])
             yield tuple([data[k] for k in keys])
 
 
@@ -193,3 +201,17 @@ def episode(iterable):
             yield whilenotdone(x, iterable)
     except StopIteration as e:
         return 
+
+
+def _tuple_or_mapping_each(source : Iterable, fun : Callable):
+    # applies fun to each element of data
+    isource = iter(source)
+    data = next(isource)
+    if isinstance(data, Mapping):
+        yield {k:fun(v) for k,v in data.items()}
+        for data in source:
+            yield {k:fun(v) for k,v in data.items()}
+    else:
+        yield tuple(fun(v) for v in data)
+        for data in source:
+            yield tuple(fun(v) for v in data)

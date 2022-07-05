@@ -10,6 +10,7 @@ __email__ = "benrjw@gmail.com"
 __status__ = "Development"
 
 import numpy as np
+from collections import Mapping
 
 __all__ = ['pack', 'mode', #'Mode',
             "STATE", "ACTION", "REWARD", "NEXT_STATE", "DONE", "INFO", "OBSERVATION", "NEXT_OBSERVATION"]
@@ -42,11 +43,12 @@ class _mode(tuple):
         if len(data) > 0 and len(kwdata) > 0:
             raise ValueError("Mode arguments cannot be combined, specify either data or kwdata.")
         
-        if len(data) == 1 and len(data[0]) == len(cls.__index__): # didnt unpack, this can happen in copy.deepcopy...
-            if isinstance(next(iter(data[0])), str): 
-                kwdata = data[0]
-            else:
-                data = data[0]
+        # TODO fix deep copy, this breaks when passing in a singleton mode (e.g. state) with first dim length = 1
+        #if len(data) == 1 and len(data[0]) == len(cls.__index__): # didnt unpack, this can happen in copy.deepcopy...
+        #    if isinstance(next(iter(data[0])), str): 
+        #        kwdata = data[0]
+        #    else:
+        #        data = data[0]
 
         if len(kwdata) > 0: # construct from dictionary
             keys = tuple([MODE_PROPERTIES_DEFAULT[i] for i in cls.__index__])

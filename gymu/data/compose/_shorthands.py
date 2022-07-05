@@ -7,11 +7,13 @@ __author__ = "Benedict Wilkins"
 __email__ = "benrjw@gmail.com"
 __status__ = "Development"
 
+import itertools
 import numpy as np
-from typing import List, Dict, Union, Any
+from typing import Callable, List, Dict, Union, Any
 
 from . import _compose
 from . import _torch
+from ...utils import logger, DEPRECATED
 
 __all__ = ("Shorthands",)
 
@@ -36,8 +38,12 @@ class Shorthands:
     def unpack_info(self, *keys : List[str]):
         return _compose.unpack_info(self, *keys)
     
-    def numpy(self):
-        return _compose.numpy(self)
+    @DEPRECATED("Shorthand 'numpy' is deprecated and will be removed in future versions, please use 'to_numpy' instead.")
+    def numpy(self): # DEPRECATED
+        return _compose.to_numpy(self)
+
+    def to_numpy(self):
+        return _compose.to_numpy(self)
 
     def mask(self, **mask : Union[int, slice, np.ndarray]):
         return _compose.mask(self, mask)
@@ -45,6 +51,15 @@ class Shorthands:
     def to_dict(self, *keys : List[str]):
         return _compose.to_dict(self, *keys)
 
+    def map_each(self, fun : Callable):
+        return _compose.map_each(self, fun)
+
+    def skip(self, n):
+        return _compose.skip(self, n)
+
+    def to_tensor(self):
+        return _torch.to_tensor(self)
+
     # TODO if torch is not installs things will break...
-    def to_tensor_dataset(self, num_workers : int = 0, show_progress : bool = False, order : List[str] = None): # WARNING YOU MIGHT RUN OUT OF MEMORY ;)
-        return _torch.to_tensor_dataset(self, num_workers=num_workers, show_progress=show_progress, order=order)
+    def to_tensor_dataset(self, num_workers : int = 0, show_progress : bool = False): # WARNING YOU MIGHT RUN OUT OF MEMORY ;)
+        return _torch.to_tensor_dataset(self, num_workers=num_workers, show_progress=show_progress)

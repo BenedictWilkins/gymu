@@ -8,15 +8,17 @@ __email__ = "benrjw@gmail.com"
 __status__ = "Development"
 
 from dataclasses import dataclass, asdict
+from re import S
 from attr import field
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset as TorchDataset
 from typing import Any, Iterable, Union
 
-from ....utils import bind
+import logging
+Logger = logging.getLogger("gymu")
 
-__all__ = ("DataModule",)
+__all__ = ("DataModule", "Dataset")
 
 @dataclass
 class Dataset(TorchDataset):
@@ -67,16 +69,17 @@ class DataModule(pl.LightningDataModule):
             validate (Any, optional): validation dataset. Defaults to None.
             test (Any, optional): test dataset. Defaults to None.
         """
-        self.train = self._initialise(train, "train")
-        self.validate = self._initialise(validate, "val")
-        self.test = self._initialise(test, "test")
+        self.train = self._initialise(train, "train", "train")
+        self.validate = self._initialise(validate, "val", "validate") # why did lightning decide to call it "val_dataloader", stupid.
+        self.test = self._initialise(test, "test", "test")
         super().__init__()
 
-    def _initialise(self, dataset, name):
+    def _initialise(self, dataset, dataloader_name, name):
         if dataset is not None:
             if not hasattr(dataset, 'dataloader'):
                 dataset = Dataset(dataset)
-            setattr(self, f'{name}_dataloader', (lambda : getattr(self, name).dataloader()))
+            setattr(self, f'{dataloader_name}_dataloader', (lambda : getattr(self, name).dataloader()))
+            Logger.debug(f"Using {dataloader_name} dataset: ", dataset)
         return dataset
 
     def prepare_data_train(self, *args, **kwargs):

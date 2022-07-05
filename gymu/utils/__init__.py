@@ -10,6 +10,7 @@ __email__ = "benrjw@gmail.com"
 __status__ ="Development"
 
 from ._serialise import *
+from ._logging import *
 
 from functools import partial 
 
@@ -22,3 +23,11 @@ class bind(partial):
         iargs = iter(args)
         args = (next(iargs) if arg is ... else arg for arg in self.args)
         return self.func(*args, *iargs, **keywords)
+
+def DEPRECATED(msg):
+    def _deprecate(fun):
+        def _fun(*args, **kwargs):
+            logger.warning(f"DEPRECATION WARNING: {msg}")
+            return fun(*args, **kwargs)
+        return _fun
+    return _deprecate

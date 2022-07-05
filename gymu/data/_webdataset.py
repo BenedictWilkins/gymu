@@ -17,7 +17,7 @@ import math
 import pathlib
 import glob
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from typing import List, Union, Dict, Any, Callable
 from plum import dispatch
 
@@ -63,7 +63,8 @@ class Processor(Shorthands, Composable, wb.Processor):
 
 class _WebDatasetIterable(Processor): # wrapper for IterableDataset...
    
-    def __init__(self, iterator):
+    def __init__(self, iterator, **kwargs):
+       
         self.iterator = iterator
     
     def __iter__(self):
@@ -71,7 +72,7 @@ class _WebDatasetIterable(Processor): # wrapper for IterableDataset...
 
 class _WebDatasetEnvironmentIterable(Processor):
 
-    def __init__(self, env : Callable, policy : Callable, mode : Mode = m.sa, max_episode_length : int = 4096, num_episodes : int = 1):
+    def __init__(self, env : Callable, policy : Callable, mode : Mode = m.sa, max_episode_length : int = 4096, num_episodes : int = 1, **kwargs):
         self.env = env
         self.policy = policy
         self._mode = mode
@@ -112,5 +113,17 @@ def dataset(iterator : Iterable, transforms = [],  **kwargs):
     return _WebDatasetIterable(iterator, **kwargs).compose_functional(*transforms)
 
 @dispatch
-def dataset(env : Callable, policy : Union[Callable,None] = None, mode = m.sa, max_episode_length : int = 4096, num_episodes : int = 1, transforms = []):
-    return _WebDatasetEnvironmentIterable(env, policy, mode=mode, max_episode_length=max_episode_length, num_episodes=num_episodes).compose_functional(*transforms)
+def dataset(iterator : Sequence, transforms = [],  **kwargs):
+    return _WebDatasetIterable(iterator, **kwargs).compose_functional(*transforms)
+
+@dispatch
+def dataset(env : Callable, policy : Union[Callable,None] = None, mode = m.sa, max_episode_length : int = 4096, num_episodes : int = 1, transforms = [], **kwargs):
+    return _WebDatasetEnvironmentIterable(env, policy, mode=mode, max_episode_length=max_episode_length, num_episodes=num_episodes, **kwargs).compose_functional(*transforms)
+
+try:
+    from torch.utils.data import Dataset
+    @dispatch
+    def dataset(iterator : Dataset, transforms = [],  **kwargs):
+        return _WebDatasetIterable(iterator, **kwargs).compose_functional(*transforms)
+except ModuleNotFoundError as e:
+    pass

@@ -66,7 +66,7 @@ class Iterator(Iterable):
                 info['terminal_state'] = next_state
                 info['terminal_info'] = next_info
             result = (state, action, reward, next_state, done, info) # S_t, A_t, R_{t+1}, S_{t+1}, done_{t+1}, info_t
-            yield self.mode(*[result[i] for i in self.mode.__index__])
+            yield  self.mode(*[result[i] for i in self.mode.__index__])
             state = next_state
             info = next_info
 
